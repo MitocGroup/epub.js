@@ -279,14 +279,13 @@ Book.prototype.coverUrl = function(){
 	return retrieved;
 };
 
-Book.prototype.getTextFromCfiRange = function(cfiRange) {
+Book.prototype.range = function(cfiRange) {
   var cfi = new EpubCFI(cfiRange);
-  var item = this.spine.get(cfi.spinePos)
+  var item = this.spine.get(cfi.spinePos);
 
   return item.load().then(function (contents) {
     var range = cfi.toRange(item.document);
-    var text = range.toString();
-    return text;
+    return range;
   })
 };
 

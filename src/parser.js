@@ -383,7 +383,10 @@ Parser.prototype.getSubitems = function(chapter) {
 
 
   for (var i = 0; i < rawSubChapters.length; i++) {
-    subChapters.push(rawSubChapters[i].innerHTML);
+    subChapters.push({
+    	name: rawSubChapters[i].innerHTML,
+    	id: rawSubChapters[i].getAttribute('id')
+    });
   }
 
   return subChapters;
