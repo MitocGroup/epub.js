@@ -1,5 +1,6 @@
 var URI = require('urijs');
 var core = require('./core');
+var RSVP = require('rsvp');
 var EpubCFI = require('./epubcfi');
 
 function Parser(){};
@@ -346,31 +347,49 @@ Parser.prototype.navItem = function(item, spineIndexByURL, bookSpine){
 	};
 };
 
-Parser.prototype.toc = function(tocXml, spineIndexByURL, bookSpine){
+Parser.prototype.toc = function(tocXml, spineIndexByURL, bookSpine, baseUrl){
 	var navPoints = tocXml.querySelectorAll("navMap navPoint");
 	var length = navPoints.length;
-	var i;
+	var loading = new RSVP.defer();
+	var loaded = loading.promise;
+	var i, j = 0;
 	var toc = {};
 	var list = [];
 	var item, parent;
 
-	if(!navPoints || length === 0) return list;
+	if(!navPoints || length === 0) loading.resolve(list);
+
 
 	for (i = 0; i < length; ++i) {
-		item = this.tocItem(navPoints[i], spineIndexByURL, bookSpine);
-		toc[item.id] = item;
-		if(!item.parent) {
+		this.tocItem(navPoints[i], spineIndexByURL, bookSpine, baseUrl).then(function(item) {
 			list.push(item);
-		} else {
-			parent = toc[item.parent];
-			parent.subitems.push(item);
-		}
+			
+			if (++j === length) {
+				return loading.resolve(list);
+			}
+		});
 	}
 
-	return list;
+	return loaded;
 };
 
-Parser.prototype.tocItem = function(item, spineIndexByURL, bookSpine){
+Parser.prototype.getSubitems = function(chapter) {
+  var rawSubChapters = chapter.getElementsByTagName('h2');
+  var subChapters = [];
+
+  if (subChapters && subChapters.length) {
+    return [];
+  }
+
+
+  for (var i = 0; i < rawSubChapters.length; i++) {
+    subChapters.push(rawSubChapters[i].innerHTML);
+  }
+
+  return subChapters;
+};
+
+Parser.prototype.tocItem = function(item, spineIndexByURL, bookSpine, baseUrl){
 	var id = item.getAttribute('id') || false,
 			content = item.querySelector("content"),
 			src = content.getAttribute('src'),
@@ -382,12 +401,25 @@ Parser.prototype.tocItem = function(item, spineIndexByURL, bookSpine){
 			// spineItem = bookSpine[spinePos],
 			subitems = [],
 			parentNode = item.parentNode,
-			parent;
+			request = require('./request'),
+			loading = new RSVP.defer(),
+			loaded = loading.promise,
+			parent,
+      navUrl;
 			// cfi = spineItem ? spineItem.cfi : '';
 
-	if(parentNode && parentNode.nodeName === "navPoint") {
-		parent = parentNode.getAttribute('id');
-	}
+  navUrl = URI(content.getAttribute('src')).absoluteTo(baseUrl).toString();
+  request(navUrl, 'html').then(function(chapter) {
+    subitems = this.getSubitems(chapter);
+
+    return loading.resolve({
+      "id": id,
+      "href": src,
+      "label": text,
+      "subitems" : subitems,
+      "parent" : parent
+    });
+  }.bind(this));
 
   /*
 	if(!id) {
@@ -402,13 +434,7 @@ Parser.prototype.tocItem = function(item, spineIndexByURL, bookSpine){
 	}
   */
 
-	return {
-		"id": id,
-		"href": src,
-		"label": text,
-		"subitems" : subitems,
-		"parent" : parent
-	};
+  return loaded;
 };
 
 Parser.prototype.pageList = function(navHtml, spineIndexByURL, bookSpine){
