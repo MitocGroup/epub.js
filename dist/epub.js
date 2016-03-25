@@ -273,7 +273,7 @@ process.umask = function() { return 0; };
  * @copyright Copyright (c) 2014 Yehuda Katz, Tom Dale, Stefan Penner and contributors
  * @license   Licensed under MIT license
  *            See https://raw.githubusercontent.com/tildeio/rsvp.js/master/LICENSE
- * @version   3.1.0
+ * @version   3.2.1
  */
 
 (function() {
@@ -579,249 +579,47 @@ process.umask = function() { return 0; };
         }
       }
     var lib$rsvp$instrument$$default = lib$rsvp$instrument$$instrument;
+    function lib$rsvp$then$$then(onFulfillment, onRejection, label) {
+      var parent = this;
+      var state = parent._state;
 
-    function  lib$rsvp$$internal$$withOwnPromise() {
-      return new TypeError('A promises callback cannot return that same promise.');
-    }
-
-    function lib$rsvp$$internal$$noop() {}
-
-    var lib$rsvp$$internal$$PENDING   = void 0;
-    var lib$rsvp$$internal$$FULFILLED = 1;
-    var lib$rsvp$$internal$$REJECTED  = 2;
-
-    var lib$rsvp$$internal$$GET_THEN_ERROR = new lib$rsvp$$internal$$ErrorObject();
-
-    function lib$rsvp$$internal$$getThen(promise) {
-      try {
-        return promise.then;
-      } catch(error) {
-        lib$rsvp$$internal$$GET_THEN_ERROR.error = error;
-        return lib$rsvp$$internal$$GET_THEN_ERROR;
+      if (state === lib$rsvp$$internal$$FULFILLED && !onFulfillment || state === lib$rsvp$$internal$$REJECTED && !onRejection) {
+        lib$rsvp$config$$config.instrument && lib$rsvp$instrument$$default('chained', parent, parent);
+        return parent;
       }
-    }
-
-    function lib$rsvp$$internal$$tryThen(then, value, fulfillmentHandler, rejectionHandler) {
-      try {
-        then.call(value, fulfillmentHandler, rejectionHandler);
-      } catch(e) {
-        return e;
-      }
-    }
-
-    function lib$rsvp$$internal$$handleForeignThenable(promise, thenable, then) {
-      lib$rsvp$config$$config.async(function(promise) {
-        var sealed = false;
-        var error = lib$rsvp$$internal$$tryThen(then, thenable, function(value) {
-          if (sealed) { return; }
-          sealed = true;
-          if (thenable !== value) {
-            lib$rsvp$$internal$$resolve(promise, value);
-          } else {
-            lib$rsvp$$internal$$fulfill(promise, value);
-          }
-        }, function(reason) {
-          if (sealed) { return; }
-          sealed = true;
-
-          lib$rsvp$$internal$$reject(promise, reason);
-        }, 'Settle: ' + (promise._label || ' unknown promise'));
-
-        if (!sealed && error) {
-          sealed = true;
-          lib$rsvp$$internal$$reject(promise, error);
-        }
-      }, promise);
-    }
-
-    function lib$rsvp$$internal$$handleOwnThenable(promise, thenable) {
-      if (thenable._state === lib$rsvp$$internal$$FULFILLED) {
-        lib$rsvp$$internal$$fulfill(promise, thenable._result);
-      } else if (thenable._state === lib$rsvp$$internal$$REJECTED) {
-        thenable._onError = null;
-        lib$rsvp$$internal$$reject(promise, thenable._result);
-      } else {
-        lib$rsvp$$internal$$subscribe(thenable, undefined, function(value) {
-          if (thenable !== value) {
-            lib$rsvp$$internal$$resolve(promise, value);
-          } else {
-            lib$rsvp$$internal$$fulfill(promise, value);
-          }
-        }, function(reason) {
-          lib$rsvp$$internal$$reject(promise, reason);
-        });
-      }
-    }
-
-    function lib$rsvp$$internal$$handleMaybeThenable(promise, maybeThenable) {
-      if (maybeThenable.constructor === promise.constructor) {
-        lib$rsvp$$internal$$handleOwnThenable(promise, maybeThenable);
-      } else {
-        var then = lib$rsvp$$internal$$getThen(maybeThenable);
-
-        if (then === lib$rsvp$$internal$$GET_THEN_ERROR) {
-          lib$rsvp$$internal$$reject(promise, lib$rsvp$$internal$$GET_THEN_ERROR.error);
-        } else if (then === undefined) {
-          lib$rsvp$$internal$$fulfill(promise, maybeThenable);
-        } else if (lib$rsvp$utils$$isFunction(then)) {
-          lib$rsvp$$internal$$handleForeignThenable(promise, maybeThenable, then);
-        } else {
-          lib$rsvp$$internal$$fulfill(promise, maybeThenable);
-        }
-      }
-    }
-
-    function lib$rsvp$$internal$$resolve(promise, value) {
-      if (promise === value) {
-        lib$rsvp$$internal$$fulfill(promise, value);
-      } else if (lib$rsvp$utils$$objectOrFunction(value)) {
-        lib$rsvp$$internal$$handleMaybeThenable(promise, value);
-      } else {
-        lib$rsvp$$internal$$fulfill(promise, value);
-      }
-    }
-
-    function lib$rsvp$$internal$$publishRejection(promise) {
-      if (promise._onError) {
-        promise._onError(promise._result);
-      }
-
-      lib$rsvp$$internal$$publish(promise);
-    }
-
-    function lib$rsvp$$internal$$fulfill(promise, value) {
-      if (promise._state !== lib$rsvp$$internal$$PENDING) { return; }
-
-      promise._result = value;
-      promise._state = lib$rsvp$$internal$$FULFILLED;
-
-      if (promise._subscribers.length === 0) {
-        if (lib$rsvp$config$$config.instrument) {
-          lib$rsvp$instrument$$default('fulfilled', promise);
-        }
-      } else {
-        lib$rsvp$config$$config.async(lib$rsvp$$internal$$publish, promise);
-      }
-    }
-
-    function lib$rsvp$$internal$$reject(promise, reason) {
-      if (promise._state !== lib$rsvp$$internal$$PENDING) { return; }
-      promise._state = lib$rsvp$$internal$$REJECTED;
-      promise._result = reason;
-      lib$rsvp$config$$config.async(lib$rsvp$$internal$$publishRejection, promise);
-    }
-
-    function lib$rsvp$$internal$$subscribe(parent, child, onFulfillment, onRejection) {
-      var subscribers = parent._subscribers;
-      var length = subscribers.length;
 
       parent._onError = null;
 
-      subscribers[length] = child;
-      subscribers[length + lib$rsvp$$internal$$FULFILLED] = onFulfillment;
-      subscribers[length + lib$rsvp$$internal$$REJECTED]  = onRejection;
+      var child = new parent.constructor(lib$rsvp$$internal$$noop, label);
+      var result = parent._result;
 
-      if (length === 0 && parent._state) {
-        lib$rsvp$config$$config.async(lib$rsvp$$internal$$publish, parent);
-      }
-    }
+      lib$rsvp$config$$config.instrument && lib$rsvp$instrument$$default('chained', parent, child);
 
-    function lib$rsvp$$internal$$publish(promise) {
-      var subscribers = promise._subscribers;
-      var settled = promise._state;
-
-      if (lib$rsvp$config$$config.instrument) {
-        lib$rsvp$instrument$$default(settled === lib$rsvp$$internal$$FULFILLED ? 'fulfilled' : 'rejected', promise);
-      }
-
-      if (subscribers.length === 0) { return; }
-
-      var child, callback, detail = promise._result;
-
-      for (var i = 0; i < subscribers.length; i += 3) {
-        child = subscribers[i];
-        callback = subscribers[i + settled];
-
-        if (child) {
-          lib$rsvp$$internal$$invokeCallback(settled, child, callback, detail);
-        } else {
-          callback(detail);
-        }
-      }
-
-      promise._subscribers.length = 0;
-    }
-
-    function lib$rsvp$$internal$$ErrorObject() {
-      this.error = null;
-    }
-
-    var lib$rsvp$$internal$$TRY_CATCH_ERROR = new lib$rsvp$$internal$$ErrorObject();
-
-    function lib$rsvp$$internal$$tryCatch(callback, detail) {
-      try {
-        return callback(detail);
-      } catch(e) {
-        lib$rsvp$$internal$$TRY_CATCH_ERROR.error = e;
-        return lib$rsvp$$internal$$TRY_CATCH_ERROR;
-      }
-    }
-
-    function lib$rsvp$$internal$$invokeCallback(settled, promise, callback, detail) {
-      var hasCallback = lib$rsvp$utils$$isFunction(callback),
-          value, error, succeeded, failed;
-
-      if (hasCallback) {
-        value = lib$rsvp$$internal$$tryCatch(callback, detail);
-
-        if (value === lib$rsvp$$internal$$TRY_CATCH_ERROR) {
-          failed = true;
-          error = value.error;
-          value = null;
-        } else {
-          succeeded = true;
-        }
-
-        if (promise === value) {
-          lib$rsvp$$internal$$reject(promise, lib$rsvp$$internal$$withOwnPromise());
-          return;
-        }
-
-      } else {
-        value = detail;
-        succeeded = true;
-      }
-
-      if (promise._state !== lib$rsvp$$internal$$PENDING) {
-        // noop
-      } else if (hasCallback && succeeded) {
-        lib$rsvp$$internal$$resolve(promise, value);
-      } else if (failed) {
-        lib$rsvp$$internal$$reject(promise, error);
-      } else if (settled === lib$rsvp$$internal$$FULFILLED) {
-        lib$rsvp$$internal$$fulfill(promise, value);
-      } else if (settled === lib$rsvp$$internal$$REJECTED) {
-        lib$rsvp$$internal$$reject(promise, value);
-      }
-    }
-
-    function lib$rsvp$$internal$$initializePromise(promise, resolver) {
-      var resolved = false;
-      try {
-        resolver(function resolvePromise(value){
-          if (resolved) { return; }
-          resolved = true;
-          lib$rsvp$$internal$$resolve(promise, value);
-        }, function rejectPromise(reason) {
-          if (resolved) { return; }
-          resolved = true;
-          lib$rsvp$$internal$$reject(promise, reason);
+      if (state) {
+        var callback = arguments[state - 1];
+        lib$rsvp$config$$config.async(function(){
+          lib$rsvp$$internal$$invokeCallback(state, child, callback, result);
         });
-      } catch(e) {
-        lib$rsvp$$internal$$reject(promise, e);
+      } else {
+        lib$rsvp$$internal$$subscribe(parent, child, onFulfillment, onRejection);
       }
-    }
 
+      return child;
+    }
+    var lib$rsvp$then$$default = lib$rsvp$then$$then;
+    function lib$rsvp$promise$resolve$$resolve(object, label) {
+      /*jshint validthis:true */
+      var Constructor = this;
+
+      if (object && typeof object === 'object' && object.constructor === Constructor) {
+        return object;
+      }
+
+      var promise = new Constructor(lib$rsvp$$internal$$noop, label);
+      lib$rsvp$$internal$$resolve(promise, object);
+      return promise;
+    }
+    var lib$rsvp$promise$resolve$$default = lib$rsvp$promise$resolve$$resolve;
     function lib$rsvp$enumerator$$makeSettledResult(state, position, value) {
       if (state === lib$rsvp$$internal$$FULFILLED) {
         return {
@@ -837,30 +635,28 @@ process.umask = function() { return 0; };
     }
 
     function lib$rsvp$enumerator$$Enumerator(Constructor, input, abortOnReject, label) {
-      var enumerator = this;
+      this._instanceConstructor = Constructor;
+      this.promise = new Constructor(lib$rsvp$$internal$$noop, label);
+      this._abortOnReject = abortOnReject;
 
-      enumerator._instanceConstructor = Constructor;
-      enumerator.promise = new Constructor(lib$rsvp$$internal$$noop, label);
-      enumerator._abortOnReject = abortOnReject;
+      if (this._validateInput(input)) {
+        this._input     = input;
+        this.length     = input.length;
+        this._remaining = input.length;
 
-      if (enumerator._validateInput(input)) {
-        enumerator._input     = input;
-        enumerator.length     = input.length;
-        enumerator._remaining = input.length;
+        this._init();
 
-        enumerator._init();
-
-        if (enumerator.length === 0) {
-          lib$rsvp$$internal$$fulfill(enumerator.promise, enumerator._result);
+        if (this.length === 0) {
+          lib$rsvp$$internal$$fulfill(this.promise, this._result);
         } else {
-          enumerator.length = enumerator.length || 0;
-          enumerator._enumerate();
-          if (enumerator._remaining === 0) {
-            lib$rsvp$$internal$$fulfill(enumerator.promise, enumerator._result);
+          this.length = this.length || 0;
+          this._enumerate();
+          if (this._remaining === 0) {
+            lib$rsvp$$internal$$fulfill(this.promise, this._result);
           }
         }
       } else {
-        lib$rsvp$$internal$$reject(enumerator.promise, enumerator._validationError());
+        lib$rsvp$$internal$$reject(this.promise, this._validationError());
       }
     }
 
@@ -879,48 +675,65 @@ process.umask = function() { return 0; };
     };
 
     lib$rsvp$enumerator$$Enumerator.prototype._enumerate = function() {
-      var enumerator = this;
-      var length     = enumerator.length;
-      var promise    = enumerator.promise;
-      var input      = enumerator._input;
+      var length     = this.length;
+      var promise    = this.promise;
+      var input      = this._input;
 
       for (var i = 0; promise._state === lib$rsvp$$internal$$PENDING && i < length; i++) {
-        enumerator._eachEntry(input[i], i);
+        this._eachEntry(input[i], i);
+      }
+    };
+
+    lib$rsvp$enumerator$$Enumerator.prototype._settleMaybeThenable = function(entry, i) {
+      var c = this._instanceConstructor;
+      var resolve = c.resolve;
+
+      if (resolve === lib$rsvp$promise$resolve$$default) {
+        var then = lib$rsvp$$internal$$getThen(entry);
+
+        if (then === lib$rsvp$then$$default &&
+            entry._state !== lib$rsvp$$internal$$PENDING) {
+          entry._onError = null;
+          this._settledAt(entry._state, i, entry._result);
+        } else if (typeof then !== 'function') {
+          this._remaining--;
+          this._result[i] = this._makeResult(lib$rsvp$$internal$$FULFILLED, i, entry);
+        } else if (c === lib$rsvp$promise$$default) {
+          var promise = new c(lib$rsvp$$internal$$noop);
+          lib$rsvp$$internal$$handleMaybeThenable(promise, entry, then);
+          this._willSettleAt(promise, i);
+        } else {
+          this._willSettleAt(new c(function(resolve) { resolve(entry); }), i);
+        }
+      } else {
+        this._willSettleAt(resolve(entry), i);
       }
     };
 
     lib$rsvp$enumerator$$Enumerator.prototype._eachEntry = function(entry, i) {
-      var enumerator = this;
-      var c = enumerator._instanceConstructor;
       if (lib$rsvp$utils$$isMaybeThenable(entry)) {
-        if (entry.constructor === c && entry._state !== lib$rsvp$$internal$$PENDING) {
-          entry._onError = null;
-          enumerator._settledAt(entry._state, i, entry._result);
-        } else {
-          enumerator._willSettleAt(c.resolve(entry), i);
-        }
+        this._settleMaybeThenable(entry, i);
       } else {
-        enumerator._remaining--;
-        enumerator._result[i] = enumerator._makeResult(lib$rsvp$$internal$$FULFILLED, i, entry);
+        this._remaining--;
+        this._result[i] = this._makeResult(lib$rsvp$$internal$$FULFILLED, i, entry);
       }
     };
 
     lib$rsvp$enumerator$$Enumerator.prototype._settledAt = function(state, i, value) {
-      var enumerator = this;
-      var promise = enumerator.promise;
+      var promise = this.promise;
 
       if (promise._state === lib$rsvp$$internal$$PENDING) {
-        enumerator._remaining--;
+        this._remaining--;
 
-        if (enumerator._abortOnReject && state === lib$rsvp$$internal$$REJECTED) {
+        if (this._abortOnReject && state === lib$rsvp$$internal$$REJECTED) {
           lib$rsvp$$internal$$reject(promise, value);
         } else {
-          enumerator._result[i] = enumerator._makeResult(state, i, value);
+          this._result[i] = this._makeResult(state, i, value);
         }
       }
 
-      if (enumerator._remaining === 0) {
-        lib$rsvp$$internal$$fulfill(promise, enumerator._result);
+      if (this._remaining === 0) {
+        lib$rsvp$$internal$$fulfill(promise, this._result);
       }
     };
 
@@ -969,19 +782,6 @@ process.umask = function() { return 0; };
       return promise;
     }
     var lib$rsvp$promise$race$$default = lib$rsvp$promise$race$$race;
-    function lib$rsvp$promise$resolve$$resolve(object, label) {
-      /*jshint validthis:true */
-      var Constructor = this;
-
-      if (object && typeof object === 'object' && object.constructor === Constructor) {
-        return object;
-      }
-
-      var promise = new Constructor(lib$rsvp$$internal$$noop, label);
-      lib$rsvp$$internal$$resolve(promise, object);
-      return promise;
-    }
-    var lib$rsvp$promise$resolve$$default = lib$rsvp$promise$resolve$$resolve;
     function lib$rsvp$promise$reject$$reject(reason, label) {
       /*jshint validthis:true */
       var Constructor = this;
@@ -1003,28 +803,17 @@ process.umask = function() { return 0; };
     }
 
     function lib$rsvp$promise$$Promise(resolver, label) {
-      var promise = this;
+      this._id = lib$rsvp$promise$$counter++;
+      this._label = label;
+      this._state = undefined;
+      this._result = undefined;
+      this._subscribers = [];
 
-      promise._id = lib$rsvp$promise$$counter++;
-      promise._label = label;
-      promise._state = undefined;
-      promise._result = undefined;
-      promise._subscribers = [];
-
-      if (lib$rsvp$config$$config.instrument) {
-        lib$rsvp$instrument$$default('created', promise);
-      }
+      lib$rsvp$config$$config.instrument && lib$rsvp$instrument$$default('created', this);
 
       if (lib$rsvp$$internal$$noop !== resolver) {
-        if (!lib$rsvp$utils$$isFunction(resolver)) {
-          lib$rsvp$promise$$needsResolver();
-        }
-
-        if (!(promise instanceof lib$rsvp$promise$$Promise)) {
-          lib$rsvp$promise$$needsNew();
-        }
-
-        lib$rsvp$$internal$$initializePromise(promise, resolver);
+        typeof resolver !== 'function' && lib$rsvp$promise$$needsResolver();
+        this instanceof lib$rsvp$promise$$Promise ? lib$rsvp$$internal$$initializePromise(this, resolver) : lib$rsvp$promise$$needsNew();
       }
     }
 
@@ -1245,37 +1034,7 @@ process.umask = function() { return 0; };
       Useful for tooling.
       @return {Promise}
     */
-      then: function(onFulfillment, onRejection, label) {
-        var parent = this;
-        var state = parent._state;
-
-        if (state === lib$rsvp$$internal$$FULFILLED && !onFulfillment || state === lib$rsvp$$internal$$REJECTED && !onRejection) {
-          if (lib$rsvp$config$$config.instrument) {
-            lib$rsvp$instrument$$default('chained', parent, parent);
-          }
-          return parent;
-        }
-
-        parent._onError = null;
-
-        var child = new parent.constructor(lib$rsvp$$internal$$noop, label);
-        var result = parent._result;
-
-        if (lib$rsvp$config$$config.instrument) {
-          lib$rsvp$instrument$$default('chained', parent, child);
-        }
-
-        if (state) {
-          var callback = arguments[state - 1];
-          lib$rsvp$config$$config.async(function(){
-            lib$rsvp$$internal$$invokeCallback(state, child, callback, result);
-          });
-        } else {
-          lib$rsvp$$internal$$subscribe(parent, child, onFulfillment, onRejection);
-        }
-
-        return child;
-      },
+      then: lib$rsvp$then$$default,
 
     /**
       `catch` is simply sugar for `then(undefined, onRejection)` which makes it the same
@@ -1354,16 +1113,257 @@ process.umask = function() { return 0; };
         var constructor = promise.constructor;
 
         return promise.then(function(value) {
-          return constructor.resolve(callback()).then(function(){
+          return constructor.resolve(callback()).then(function() {
             return value;
           });
         }, function(reason) {
-          return constructor.resolve(callback()).then(function(){
-            throw reason;
+          return constructor.resolve(callback()).then(function() {
+            return constructor.reject(reason);
           });
         }, label);
       }
     };
+    function  lib$rsvp$$internal$$withOwnPromise() {
+      return new TypeError('A promises callback cannot return that same promise.');
+    }
+
+    function lib$rsvp$$internal$$noop() {}
+
+    var lib$rsvp$$internal$$PENDING   = void 0;
+    var lib$rsvp$$internal$$FULFILLED = 1;
+    var lib$rsvp$$internal$$REJECTED  = 2;
+
+    var lib$rsvp$$internal$$GET_THEN_ERROR = new lib$rsvp$$internal$$ErrorObject();
+
+    function lib$rsvp$$internal$$getThen(promise) {
+      try {
+        return promise.then;
+      } catch(error) {
+        lib$rsvp$$internal$$GET_THEN_ERROR.error = error;
+        return lib$rsvp$$internal$$GET_THEN_ERROR;
+      }
+    }
+
+    function lib$rsvp$$internal$$tryThen(then, value, fulfillmentHandler, rejectionHandler) {
+      try {
+        then.call(value, fulfillmentHandler, rejectionHandler);
+      } catch(e) {
+        return e;
+      }
+    }
+
+    function lib$rsvp$$internal$$handleForeignThenable(promise, thenable, then) {
+      lib$rsvp$config$$config.async(function(promise) {
+        var sealed = false;
+        var error = lib$rsvp$$internal$$tryThen(then, thenable, function(value) {
+          if (sealed) { return; }
+          sealed = true;
+          if (thenable !== value) {
+            lib$rsvp$$internal$$resolve(promise, value, undefined);
+          } else {
+            lib$rsvp$$internal$$fulfill(promise, value);
+          }
+        }, function(reason) {
+          if (sealed) { return; }
+          sealed = true;
+
+          lib$rsvp$$internal$$reject(promise, reason);
+        }, 'Settle: ' + (promise._label || ' unknown promise'));
+
+        if (!sealed && error) {
+          sealed = true;
+          lib$rsvp$$internal$$reject(promise, error);
+        }
+      }, promise);
+    }
+
+    function lib$rsvp$$internal$$handleOwnThenable(promise, thenable) {
+      if (thenable._state === lib$rsvp$$internal$$FULFILLED) {
+        lib$rsvp$$internal$$fulfill(promise, thenable._result);
+      } else if (thenable._state === lib$rsvp$$internal$$REJECTED) {
+        thenable._onError = null;
+        lib$rsvp$$internal$$reject(promise, thenable._result);
+      } else {
+        lib$rsvp$$internal$$subscribe(thenable, undefined, function(value) {
+          if (thenable !== value) {
+            lib$rsvp$$internal$$resolve(promise, value, undefined);
+          } else {
+            lib$rsvp$$internal$$fulfill(promise, value);
+          }
+        }, function(reason) {
+          lib$rsvp$$internal$$reject(promise, reason);
+        });
+      }
+    }
+
+    function lib$rsvp$$internal$$handleMaybeThenable(promise, maybeThenable, then) {
+      if (maybeThenable.constructor === promise.constructor &&
+          then === lib$rsvp$then$$default &&
+          constructor.resolve === lib$rsvp$promise$resolve$$default) {
+        lib$rsvp$$internal$$handleOwnThenable(promise, maybeThenable);
+      } else {
+        if (then === lib$rsvp$$internal$$GET_THEN_ERROR) {
+          lib$rsvp$$internal$$reject(promise, lib$rsvp$$internal$$GET_THEN_ERROR.error);
+        } else if (then === undefined) {
+          lib$rsvp$$internal$$fulfill(promise, maybeThenable);
+        } else if (lib$rsvp$utils$$isFunction(then)) {
+          lib$rsvp$$internal$$handleForeignThenable(promise, maybeThenable, then);
+        } else {
+          lib$rsvp$$internal$$fulfill(promise, maybeThenable);
+        }
+      }
+    }
+
+    function lib$rsvp$$internal$$resolve(promise, value) {
+      if (promise === value) {
+        lib$rsvp$$internal$$fulfill(promise, value);
+      } else if (lib$rsvp$utils$$objectOrFunction(value)) {
+        lib$rsvp$$internal$$handleMaybeThenable(promise, value, lib$rsvp$$internal$$getThen(value));
+      } else {
+        lib$rsvp$$internal$$fulfill(promise, value);
+      }
+    }
+
+    function lib$rsvp$$internal$$publishRejection(promise) {
+      if (promise._onError) {
+        promise._onError(promise._result);
+      }
+
+      lib$rsvp$$internal$$publish(promise);
+    }
+
+    function lib$rsvp$$internal$$fulfill(promise, value) {
+      if (promise._state !== lib$rsvp$$internal$$PENDING) { return; }
+
+      promise._result = value;
+      promise._state = lib$rsvp$$internal$$FULFILLED;
+
+      if (promise._subscribers.length === 0) {
+        if (lib$rsvp$config$$config.instrument) {
+          lib$rsvp$instrument$$default('fulfilled', promise);
+        }
+      } else {
+        lib$rsvp$config$$config.async(lib$rsvp$$internal$$publish, promise);
+      }
+    }
+
+    function lib$rsvp$$internal$$reject(promise, reason) {
+      if (promise._state !== lib$rsvp$$internal$$PENDING) { return; }
+      promise._state = lib$rsvp$$internal$$REJECTED;
+      promise._result = reason;
+      lib$rsvp$config$$config.async(lib$rsvp$$internal$$publishRejection, promise);
+    }
+
+    function lib$rsvp$$internal$$subscribe(parent, child, onFulfillment, onRejection) {
+      var subscribers = parent._subscribers;
+      var length = subscribers.length;
+
+      parent._onError = null;
+
+      subscribers[length] = child;
+      subscribers[length + lib$rsvp$$internal$$FULFILLED] = onFulfillment;
+      subscribers[length + lib$rsvp$$internal$$REJECTED]  = onRejection;
+
+      if (length === 0 && parent._state) {
+        lib$rsvp$config$$config.async(lib$rsvp$$internal$$publish, parent);
+      }
+    }
+
+    function lib$rsvp$$internal$$publish(promise) {
+      var subscribers = promise._subscribers;
+      var settled = promise._state;
+
+      if (lib$rsvp$config$$config.instrument) {
+        lib$rsvp$instrument$$default(settled === lib$rsvp$$internal$$FULFILLED ? 'fulfilled' : 'rejected', promise);
+      }
+
+      if (subscribers.length === 0) { return; }
+
+      var child, callback, detail = promise._result;
+
+      for (var i = 0; i < subscribers.length; i += 3) {
+        child = subscribers[i];
+        callback = subscribers[i + settled];
+
+        if (child) {
+          lib$rsvp$$internal$$invokeCallback(settled, child, callback, detail);
+        } else {
+          callback(detail);
+        }
+      }
+
+      promise._subscribers.length = 0;
+    }
+
+    function lib$rsvp$$internal$$ErrorObject() {
+      this.error = null;
+    }
+
+    var lib$rsvp$$internal$$TRY_CATCH_ERROR = new lib$rsvp$$internal$$ErrorObject();
+
+    function lib$rsvp$$internal$$tryCatch(callback, detail) {
+      try {
+        return callback(detail);
+      } catch(e) {
+        lib$rsvp$$internal$$TRY_CATCH_ERROR.error = e;
+        return lib$rsvp$$internal$$TRY_CATCH_ERROR;
+      }
+    }
+
+    function lib$rsvp$$internal$$invokeCallback(settled, promise, callback, detail) {
+      var hasCallback = lib$rsvp$utils$$isFunction(callback),
+          value, error, succeeded, failed;
+
+      if (hasCallback) {
+        value = lib$rsvp$$internal$$tryCatch(callback, detail);
+
+        if (value === lib$rsvp$$internal$$TRY_CATCH_ERROR) {
+          failed = true;
+          error = value.error;
+          value = null;
+        } else {
+          succeeded = true;
+        }
+
+        if (promise === value) {
+          lib$rsvp$$internal$$reject(promise, lib$rsvp$$internal$$withOwnPromise());
+          return;
+        }
+
+      } else {
+        value = detail;
+        succeeded = true;
+      }
+
+      if (promise._state !== lib$rsvp$$internal$$PENDING) {
+        // noop
+      } else if (hasCallback && succeeded) {
+        lib$rsvp$$internal$$resolve(promise, value);
+      } else if (failed) {
+        lib$rsvp$$internal$$reject(promise, error);
+      } else if (settled === lib$rsvp$$internal$$FULFILLED) {
+        lib$rsvp$$internal$$fulfill(promise, value);
+      } else if (settled === lib$rsvp$$internal$$REJECTED) {
+        lib$rsvp$$internal$$reject(promise, value);
+      }
+    }
+
+    function lib$rsvp$$internal$$initializePromise(promise, resolver) {
+      var resolved = false;
+      try {
+        resolver(function resolvePromise(value){
+          if (resolved) { return; }
+          resolved = true;
+          lib$rsvp$$internal$$resolve(promise, value);
+        }, function rejectPromise(reason) {
+          if (resolved) { return; }
+          resolved = true;
+          lib$rsvp$$internal$$reject(promise, reason);
+        });
+      } catch(e) {
+        lib$rsvp$$internal$$reject(promise, e);
+      }
+    }
 
     function lib$rsvp$all$settled$$AllSettled(Constructor, entries, label) {
       this._superConstructor(Constructor, entries, false /* don't abort on reject */, label);
@@ -1871,15 +1871,256 @@ process.umask = function() { return 0; };
 },{"_process":3}],5:[function(require,module,exports){
 /*!
  * URI.js - Mutating URLs
+ * Second Level Domain (SLD) Support
  *
- * Version: 1.17.0
+ * Version: 1.17.1
  *
  * Author: Rodney Rehm
  * Web: http://medialize.github.io/URI.js/
  *
  * Licensed under
  *   MIT License http://www.opensource.org/licenses/mit-license
- *   GPL v3 http://opensource.org/licenses/GPL-3.0
+ *
+ */
+
+(function (root, factory) {
+  'use strict';
+  // https://github.com/umdjs/umd/blob/master/returnExports.js
+  if (typeof exports === 'object') {
+    // Node
+    module.exports = factory();
+  } else if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(factory);
+  } else {
+    // Browser globals (root is window)
+    root.SecondLevelDomains = factory(root);
+  }
+}(this, function (root) {
+  'use strict';
+
+  // save current SecondLevelDomains variable, if any
+  var _SecondLevelDomains = root && root.SecondLevelDomains;
+
+  var SLD = {
+    // list of known Second Level Domains
+    // converted list of SLDs from https://github.com/gavingmiller/second-level-domains
+    // ----
+    // publicsuffix.org is more current and actually used by a couple of browsers internally.
+    // downside is it also contains domains like "dyndns.org" - which is fine for the security
+    // issues browser have to deal with (SOP for cookies, etc) - but is way overboard for URI.js
+    // ----
+    list: {
+      'ac':' com gov mil net org ',
+      'ae':' ac co gov mil name net org pro sch ',
+      'af':' com edu gov net org ',
+      'al':' com edu gov mil net org ',
+      'ao':' co ed gv it og pb ',
+      'ar':' com edu gob gov int mil net org tur ',
+      'at':' ac co gv or ',
+      'au':' asn com csiro edu gov id net org ',
+      'ba':' co com edu gov mil net org rs unbi unmo unsa untz unze ',
+      'bb':' biz co com edu gov info net org store tv ',
+      'bh':' biz cc com edu gov info net org ',
+      'bn':' com edu gov net org ',
+      'bo':' com edu gob gov int mil net org tv ',
+      'br':' adm adv agr am arq art ato b bio blog bmd cim cng cnt com coop ecn edu eng esp etc eti far flog fm fnd fot fst g12 ggf gov imb ind inf jor jus lel mat med mil mus net nom not ntr odo org ppg pro psc psi qsl rec slg srv tmp trd tur tv vet vlog wiki zlg ',
+      'bs':' com edu gov net org ',
+      'bz':' du et om ov rg ',
+      'ca':' ab bc mb nb nf nl ns nt nu on pe qc sk yk ',
+      'ck':' biz co edu gen gov info net org ',
+      'cn':' ac ah bj com cq edu fj gd gov gs gx gz ha hb he hi hl hn jl js jx ln mil net nm nx org qh sc sd sh sn sx tj tw xj xz yn zj ',
+      'co':' com edu gov mil net nom org ',
+      'cr':' ac c co ed fi go or sa ',
+      'cy':' ac biz com ekloges gov ltd name net org parliament press pro tm ',
+      'do':' art com edu gob gov mil net org sld web ',
+      'dz':' art asso com edu gov net org pol ',
+      'ec':' com edu fin gov info med mil net org pro ',
+      'eg':' com edu eun gov mil name net org sci ',
+      'er':' com edu gov ind mil net org rochest w ',
+      'es':' com edu gob nom org ',
+      'et':' biz com edu gov info name net org ',
+      'fj':' ac biz com info mil name net org pro ',
+      'fk':' ac co gov net nom org ',
+      'fr':' asso com f gouv nom prd presse tm ',
+      'gg':' co net org ',
+      'gh':' com edu gov mil org ',
+      'gn':' ac com gov net org ',
+      'gr':' com edu gov mil net org ',
+      'gt':' com edu gob ind mil net org ',
+      'gu':' com edu gov net org ',
+      'hk':' com edu gov idv net org ',
+      'hu':' 2000 agrar bolt casino city co erotica erotika film forum games hotel info ingatlan jogasz konyvelo lakas media news org priv reklam sex shop sport suli szex tm tozsde utazas video ',
+      'id':' ac co go mil net or sch web ',
+      'il':' ac co gov idf k12 muni net org ',
+      'in':' ac co edu ernet firm gen gov i ind mil net nic org res ',
+      'iq':' com edu gov i mil net org ',
+      'ir':' ac co dnssec gov i id net org sch ',
+      'it':' edu gov ',
+      'je':' co net org ',
+      'jo':' com edu gov mil name net org sch ',
+      'jp':' ac ad co ed go gr lg ne or ',
+      'ke':' ac co go info me mobi ne or sc ',
+      'kh':' com edu gov mil net org per ',
+      'ki':' biz com de edu gov info mob net org tel ',
+      'km':' asso com coop edu gouv k medecin mil nom notaires pharmaciens presse tm veterinaire ',
+      'kn':' edu gov net org ',
+      'kr':' ac busan chungbuk chungnam co daegu daejeon es gangwon go gwangju gyeongbuk gyeonggi gyeongnam hs incheon jeju jeonbuk jeonnam k kg mil ms ne or pe re sc seoul ulsan ',
+      'kw':' com edu gov net org ',
+      'ky':' com edu gov net org ',
+      'kz':' com edu gov mil net org ',
+      'lb':' com edu gov net org ',
+      'lk':' assn com edu gov grp hotel int ltd net ngo org sch soc web ',
+      'lr':' com edu gov net org ',
+      'lv':' asn com conf edu gov id mil net org ',
+      'ly':' com edu gov id med net org plc sch ',
+      'ma':' ac co gov m net org press ',
+      'mc':' asso tm ',
+      'me':' ac co edu gov its net org priv ',
+      'mg':' com edu gov mil nom org prd tm ',
+      'mk':' com edu gov inf name net org pro ',
+      'ml':' com edu gov net org presse ',
+      'mn':' edu gov org ',
+      'mo':' com edu gov net org ',
+      'mt':' com edu gov net org ',
+      'mv':' aero biz com coop edu gov info int mil museum name net org pro ',
+      'mw':' ac co com coop edu gov int museum net org ',
+      'mx':' com edu gob net org ',
+      'my':' com edu gov mil name net org sch ',
+      'nf':' arts com firm info net other per rec store web ',
+      'ng':' biz com edu gov mil mobi name net org sch ',
+      'ni':' ac co com edu gob mil net nom org ',
+      'np':' com edu gov mil net org ',
+      'nr':' biz com edu gov info net org ',
+      'om':' ac biz co com edu gov med mil museum net org pro sch ',
+      'pe':' com edu gob mil net nom org sld ',
+      'ph':' com edu gov i mil net ngo org ',
+      'pk':' biz com edu fam gob gok gon gop gos gov net org web ',
+      'pl':' art bialystok biz com edu gda gdansk gorzow gov info katowice krakow lodz lublin mil net ngo olsztyn org poznan pwr radom slupsk szczecin torun warszawa waw wroc wroclaw zgora ',
+      'pr':' ac biz com edu est gov info isla name net org pro prof ',
+      'ps':' com edu gov net org plo sec ',
+      'pw':' belau co ed go ne or ',
+      'ro':' arts com firm info nom nt org rec store tm www ',
+      'rs':' ac co edu gov in org ',
+      'sb':' com edu gov net org ',
+      'sc':' com edu gov net org ',
+      'sh':' co com edu gov net nom org ',
+      'sl':' com edu gov net org ',
+      'st':' co com consulado edu embaixada gov mil net org principe saotome store ',
+      'sv':' com edu gob org red ',
+      'sz':' ac co org ',
+      'tr':' av bbs bel biz com dr edu gen gov info k12 name net org pol tel tsk tv web ',
+      'tt':' aero biz cat co com coop edu gov info int jobs mil mobi museum name net org pro tel travel ',
+      'tw':' club com ebiz edu game gov idv mil net org ',
+      'mu':' ac co com gov net or org ',
+      'mz':' ac co edu gov org ',
+      'na':' co com ',
+      'nz':' ac co cri geek gen govt health iwi maori mil net org parliament school ',
+      'pa':' abo ac com edu gob ing med net nom org sld ',
+      'pt':' com edu gov int net nome org publ ',
+      'py':' com edu gov mil net org ',
+      'qa':' com edu gov mil net org ',
+      're':' asso com nom ',
+      'ru':' ac adygeya altai amur arkhangelsk astrakhan bashkiria belgorod bir bryansk buryatia cbg chel chelyabinsk chita chukotka chuvashia com dagestan e-burg edu gov grozny int irkutsk ivanovo izhevsk jar joshkar-ola kalmykia kaluga kamchatka karelia kazan kchr kemerovo khabarovsk khakassia khv kirov koenig komi kostroma kranoyarsk kuban kurgan kursk lipetsk magadan mari mari-el marine mil mordovia mosreg msk murmansk nalchik net nnov nov novosibirsk nsk omsk orenburg org oryol penza perm pp pskov ptz rnd ryazan sakhalin samara saratov simbirsk smolensk spb stavropol stv surgut tambov tatarstan tom tomsk tsaritsyn tsk tula tuva tver tyumen udm udmurtia ulan-ude vladikavkaz vladimir vladivostok volgograd vologda voronezh vrn vyatka yakutia yamal yekaterinburg yuzhno-sakhalinsk ',
+      'rw':' ac co com edu gouv gov int mil net ',
+      'sa':' com edu gov med net org pub sch ',
+      'sd':' com edu gov info med net org tv ',
+      'se':' a ac b bd c d e f g h i k l m n o org p parti pp press r s t tm u w x y z ',
+      'sg':' com edu gov idn net org per ',
+      'sn':' art com edu gouv org perso univ ',
+      'sy':' com edu gov mil net news org ',
+      'th':' ac co go in mi net or ',
+      'tj':' ac biz co com edu go gov info int mil name net nic org test web ',
+      'tn':' agrinet com defense edunet ens fin gov ind info intl mincom nat net org perso rnrt rns rnu tourism ',
+      'tz':' ac co go ne or ',
+      'ua':' biz cherkassy chernigov chernovtsy ck cn co com crimea cv dn dnepropetrovsk donetsk dp edu gov if in ivano-frankivsk kh kharkov kherson khmelnitskiy kiev kirovograd km kr ks kv lg lugansk lutsk lviv me mk net nikolaev od odessa org pl poltava pp rovno rv sebastopol sumy te ternopil uzhgorod vinnica vn zaporizhzhe zhitomir zp zt ',
+      'ug':' ac co go ne or org sc ',
+      'uk':' ac bl british-library co cym gov govt icnet jet lea ltd me mil mod national-library-scotland nel net nhs nic nls org orgn parliament plc police sch scot soc ',
+      'us':' dni fed isa kids nsn ',
+      'uy':' com edu gub mil net org ',
+      've':' co com edu gob info mil net org web ',
+      'vi':' co com k12 net org ',
+      'vn':' ac biz com edu gov health info int name net org pro ',
+      'ye':' co com gov ltd me net org plc ',
+      'yu':' ac co edu gov org ',
+      'za':' ac agric alt bourse city co cybernet db edu gov grondar iaccess imt inca landesign law mil net ngo nis nom olivetti org pix school tm web ',
+      'zm':' ac co com edu gov net org sch '
+    },
+    // gorhill 2013-10-25: Using indexOf() instead Regexp(). Significant boost
+    // in both performance and memory footprint. No initialization required.
+    // http://jsperf.com/uri-js-sld-regex-vs-binary-search/4
+    // Following methods use lastIndexOf() rather than array.split() in order
+    // to avoid any memory allocations.
+    has: function(domain) {
+      var tldOffset = domain.lastIndexOf('.');
+      if (tldOffset <= 0 || tldOffset >= (domain.length-1)) {
+        return false;
+      }
+      var sldOffset = domain.lastIndexOf('.', tldOffset-1);
+      if (sldOffset <= 0 || sldOffset >= (tldOffset-1)) {
+        return false;
+      }
+      var sldList = SLD.list[domain.slice(tldOffset+1)];
+      if (!sldList) {
+        return false;
+      }
+      return sldList.indexOf(' ' + domain.slice(sldOffset+1, tldOffset) + ' ') >= 0;
+    },
+    is: function(domain) {
+      var tldOffset = domain.lastIndexOf('.');
+      if (tldOffset <= 0 || tldOffset >= (domain.length-1)) {
+        return false;
+      }
+      var sldOffset = domain.lastIndexOf('.', tldOffset-1);
+      if (sldOffset >= 0) {
+        return false;
+      }
+      var sldList = SLD.list[domain.slice(tldOffset+1)];
+      if (!sldList) {
+        return false;
+      }
+      return sldList.indexOf(' ' + domain.slice(0, tldOffset) + ' ') >= 0;
+    },
+    get: function(domain) {
+      var tldOffset = domain.lastIndexOf('.');
+      if (tldOffset <= 0 || tldOffset >= (domain.length-1)) {
+        return null;
+      }
+      var sldOffset = domain.lastIndexOf('.', tldOffset-1);
+      if (sldOffset <= 0 || sldOffset >= (tldOffset-1)) {
+        return null;
+      }
+      var sldList = SLD.list[domain.slice(tldOffset+1)];
+      if (!sldList) {
+        return null;
+      }
+      if (sldList.indexOf(' ' + domain.slice(sldOffset+1, tldOffset) + ' ') < 0) {
+        return null;
+      }
+      return domain.slice(sldOffset+1);
+    },
+    noConflict: function(){
+      if (root.SecondLevelDomains === this) {
+        root.SecondLevelDomains = _SecondLevelDomains;
+      }
+      return this;
+    }
+  };
+
+  return SLD;
+}));
+
+},{}],6:[function(require,module,exports){
+/*!
+ * URI.js - Mutating URLs
+ *
+ * Version: 1.17.1
+ *
+ * Author: Rodney Rehm
+ * Web: http://medialize.github.io/URI.js/
+ *
+ * Licensed under
+ *   MIT License http://www.opensource.org/licenses/mit-license
  *
  */
 (function (root, factory) {
@@ -1943,7 +2184,7 @@ process.umask = function() { return 0; };
     return this;
   }
 
-  URI.version = '1.17.0';
+  URI.version = '1.17.1';
 
   var p = URI.prototype;
   var hasOwn = Object.prototype.hasOwnProperty;
@@ -2666,18 +2907,35 @@ process.umask = function() { return 0; };
     }
   };
   URI.hasQuery = function(data, name, value, withinArray) {
-    if (typeof name === 'object') {
-      for (var key in name) {
-        if (hasOwn.call(name, key)) {
-          if (!URI.hasQuery(data, key, name[key])) {
-            return false;
+    switch (getType(name)) {
+      case 'String':
+        // Nothing to do here
+        break;
+
+      case 'RegExp':
+        for (var key in data) {
+          if (hasOwn.call(data, key)) {
+            if (name.test(key) && (value === undefined || URI.hasQuery(data, key, value))) {
+              return true;
+            }
           }
         }
-      }
 
-      return true;
-    } else if (typeof name !== 'string') {
-      throw new TypeError('URI.hasQuery() accepts an object, string as the name parameter');
+        return false;
+
+      case 'Object':
+        for (var _key in name) {
+          if (hasOwn.call(name, _key)) {
+            if (!URI.hasQuery(data, _key, name[_key])) {
+              return false;
+            }
+          }
+        }
+
+        return true;
+
+      default:
+        throw new TypeError('URI.hasQuery() accepts a string, regular expression or object as the name parameter');
     }
 
     switch (getType(value)) {
@@ -3095,8 +3353,6 @@ process.umask = function() { return 0; };
 
   // compound accessors
   p.origin = function(v, build) {
-    var parts;
-
     if (this._parts.urn) {
       return v === undefined ? '' : this;
     }
@@ -3104,7 +3360,10 @@ process.umask = function() { return 0; };
     if (v === undefined) {
       var protocol = this.protocol();
       var authority = this.authority();
-      if (!authority) return '';
+      if (!authority) {
+        return '';
+      }
+
       return (protocol ? protocol + '://' : '') + this.authority();
     } else {
       var origin = URI(v);
@@ -3688,6 +3947,8 @@ process.umask = function() { return 0; };
       return this;
     }
 
+    _path = URI.recodePath(_path);
+
     var _was_relative;
     var _leadingParents = '';
     var _parent, _pos;
@@ -3718,7 +3979,7 @@ process.umask = function() { return 0; };
 
     // resolve parents
     while (true) {
-      _parent = _path.indexOf('/..');
+      _parent = _path.search(/\/\.\.(\/|$)/);
       if (_parent === -1) {
         // no more ../ to resolve
         break;
@@ -3740,7 +4001,6 @@ process.umask = function() { return 0; };
       _path = _leadingParents + _path.substring(1);
     }
 
-    _path = URI.recodePath(_path);
     this._parts.path = _path;
     this.build(!build);
     return this;
@@ -4031,7 +4291,7 @@ process.umask = function() { return 0; };
   return URI;
 }));
 
-},{"./IPv6":2,"./SecondLevelDomains":2,"./punycode":2}],6:[function(require,module,exports){
+},{"./IPv6":2,"./SecondLevelDomains":5,"./punycode":2}],7:[function(require,module,exports){
 var RSVP = require('rsvp');
 var URI = require('urijs');
 var core = require('./core');
@@ -4313,14 +4573,13 @@ Book.prototype.coverUrl = function(){
 	return retrieved;
 };
 
-Book.prototype.getTextFromCfiRange = function(cfiRange) {
+Book.prototype.range = function(cfiRange) {
   var cfi = new EpubCFI(cfiRange);
-  var item = this.spine.get(cfi.spinePos)
+  var item = this.spine.get(cfi.spinePos);
 
   return item.load().then(function (contents) {
     var range = cfi.toRange(item.document);
-    var text = range.toString();
-    return text;
+    return range;
   })
 };
 
@@ -4342,7 +4601,7 @@ RSVP.on('rejected', function(event){
   console.error(event.detail.message, event.detail.stack);
 });
 
-},{"./continuous":7,"./core":8,"./epubcfi":9,"./locations":13,"./navigation":15,"./paginate":16,"./parser":17,"./rendition":19,"./request":21,"./spine":23,"./unarchive":24,"rsvp":4,"urijs":5}],7:[function(require,module,exports){
+},{"./continuous":8,"./core":9,"./epubcfi":10,"./locations":13,"./navigation":15,"./paginate":16,"./parser":17,"./rendition":19,"./request":21,"./spine":23,"./unarchive":24,"rsvp":4,"urijs":6}],8:[function(require,module,exports){
 var RSVP = require('rsvp');
 var core = require('./core');
 var Rendition = require('./rendition');
@@ -4762,7 +5021,7 @@ Continuous.prototype.current = function(what){
 
 module.exports = Continuous;
 
-},{"./core":8,"./rendition":19,"./view":25,"rsvp":4}],8:[function(require,module,exports){
+},{"./core":9,"./rendition":19,"./view":25,"rsvp":4}],9:[function(require,module,exports){
 var RSVP = require('rsvp');
 
 var requestAnimationFrame = (typeof window != 'undefined') ? (window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame) : false;
@@ -5203,7 +5462,7 @@ module.exports = {
   'type': type
 };
 
-},{"rsvp":4}],9:[function(require,module,exports){
+},{"rsvp":4}],10:[function(require,module,exports){
 var URI = require('urijs');
 var core = require('./core');
 
@@ -5221,11 +5480,8 @@ var core = require('./core');
   - Text Location Assertion ([)
 */
 
-function EpubCFI(cfiFrom, base, options){
+function EpubCFI(cfiFrom, base, ignoreClass){
   var type;
-  this.options = {
-    ignoreClass: 'annotator-hl'
-  };
 
   this.str = '';
 
@@ -5240,25 +5496,9 @@ function EpubCFI(cfiFrom, base, options){
 
   // Allow instantiation without the 'new' keyword
   if (!(this instanceof EpubCFI)) {
-    return new EpubCFI(cfiFrom, base, options);
+    return new EpubCFI(cfiFrom, base, ignoreClass);
   }
 
-  // Find options
-  for (var i = 1, length = arguments.length; i < length; i++) {
-    if(typeof arguments[i] === 'object' && (arguments[i].ignoreClass)) {
-      core.extend(this.options, arguments[i]);
-    }
-  }
-
-
-  /* TODO: maybe accept object that includes:
-    {
-      spineNodeIndex: <int>
-      index: <int>
-      idref: <string:optional>
-    }
-  }
-  */
   if(typeof base === 'string') {
     this.base = this.parseComponent(base);
   } else if(typeof base === 'object' && base.steps) {
@@ -5272,9 +5512,9 @@ function EpubCFI(cfiFrom, base, options){
     this.str = cfiFrom;
     return core.extend(this, this.parse(cfiFrom));
   } else if (type === 'range') {
-    return core.extend(this, this.fromRange(cfiFrom, this.base));
+    return core.extend(this, this.fromRange(cfiFrom, this.base, ignoreClass));
   } else if (type === 'node') {
-    return core.extend(this, this.fromNode(cfiFrom, this.base));
+    return core.extend(this, this.fromNode(cfiFrom, this.base, ignoreClass));
   } else if (type === 'EpubCFI' && cfiFrom.path) {
     return cfiFrom;
   } else if (!cfiFrom) {
@@ -5664,7 +5904,7 @@ EpubCFI.prototype.equalStep = function(stepA, stepB) {
 
   return false;
 };
-EpubCFI.prototype.fromRange = function(range, base) {
+EpubCFI.prototype.fromRange = function(range, base, ignoreClass) {
   var cfi = {
       range: false,
       base: {},
@@ -5679,14 +5919,13 @@ EpubCFI.prototype.fromRange = function(range, base) {
   var startOffset = range.startOffset;
   var endOffset = range.endOffset;
 
-  var needsIgnoring = (start.ownerDocument.querySelector('.' + this.options.ignoreClass) != null);
-  var ignoreClass;
-  // Tell pathTo if / what to ignore
-  if (needsIgnoring) {
-    ignoreClass = this.options.ignoreClass
-  } else {
-    ignoreClass = false;
+  var needsIgnoring = false;
+
+  if (ignoreClass) {
+    // Tell pathTo if / what to ignore
+    needsIgnoring = (start.ownerDocument.querySelector('.' + ignoreClass) != null);
   }
+
 
   if (typeof base === 'string') {
     cfi.base = this.parseComponent(base);
@@ -5753,7 +5992,7 @@ EpubCFI.prototype.fromRange = function(range, base) {
   return cfi;
 }
 
-EpubCFI.prototype.fromNode = function(anchor, base) {
+EpubCFI.prototype.fromNode = function(anchor, base, ignoreClass) {
   var cfi = {
       range: false,
       base: {},
@@ -5762,13 +6001,11 @@ EpubCFI.prototype.fromNode = function(anchor, base) {
       end: null
     };
 
-  var needsIgnoring = (anchor.ownerDocument.querySelector('.' + this.options.ignoreClass) != null);
-  var ignoreClass;
-  // Tell pathTo if / what to ignore
-  if (needsIgnoring) {
-    ignoreClass = this.options.ignoreClass
-  } else {
-    ignoreClass = false;
+  var needsIgnoring = false;
+
+  if (ignoreClass) {
+    // Tell pathTo if / what to ignore
+    needsIgnoring = (anchor.ownerDocument.querySelector('.' + ignoreClass) != null);
   }
 
   if (typeof base === 'string') {
@@ -6021,18 +6258,16 @@ EpubCFI.prototype.walkToNode = function(steps, _doc, ignoreClass) {
   return container;
 };
 
-EpubCFI.prototype.findNode = function(steps, _doc) {
+EpubCFI.prototype.findNode = function(steps, _doc, ignoreClass) {
   var doc = _doc || document;
   var container;
   var xpath;
-  // Check if we might need to need to fix missed results
-  var needsIgnoring = (doc.querySelector('.' + this.options.ignoreClass) != null);
 
-  if(!needsIgnoring && typeof doc.evaluate != 'undefined') {
+  if(!ignoreClass && typeof doc.evaluate != 'undefined') {
     xpath = this.stepsToXpath(steps);
     container = doc.evaluate(xpath, doc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-  } else if(needsIgnoring) {
-    container = this.walkToNode(steps, doc, this.options.ignoreClass);
+  } else if(ignoreClass) {
+    container = this.walkToNode(steps, doc, ignoreClass);
   } else {
     container = this.walkToNode(steps, doc);
   }
@@ -6041,7 +6276,7 @@ EpubCFI.prototype.findNode = function(steps, _doc) {
 };
 
 EpubCFI.prototype.fixMiss = function(steps, offset, _doc, ignoreClass) {
-  var container = this.findNode(steps.slice(0,-1), _doc);
+  var container = this.findNode(steps.slice(0,-1), _doc, ignoreClass);
   var children = container.childNodes;
   var map = this.normalizedMap(children, Node.TEXT_NODE, ignoreClass);
   var i;
@@ -6076,62 +6311,60 @@ EpubCFI.prototype.fixMiss = function(steps, offset, _doc, ignoreClass) {
 
 };
 
-EpubCFI.prototype.toRange = function(_doc, _cfi) {
+EpubCFI.prototype.toRange = function(_doc, ignoreClass) {
   var doc = _doc || document;
   var range = doc.createRange();
   var start, end, startContainer, endContainer;
-  var cfi = _cfi || this;
+  var cfi = this;
   var startSteps, endSteps;
+  var needsIgnoring = ignoreClass ? (doc.querySelector('.' + ignoreClass) != null) : false;
   var missed;
 
-    if (cfi.range) {
-      start = cfi.start;
-      startSteps = cfi.path.steps.concat(start.steps);
-      startContainer = this.findNode(startSteps, doc);
-      end = cfi.end;
-      endSteps = cfi.path.steps.concat(end.steps);
-      endContainer = this.findNode(endSteps, doc);
-    } else {
-      start = cfi.path;
-      startSteps = cfi.path.steps;
-      startContainer = this.findNode(cfi.path.steps, doc);
-    }
+  if (cfi.range) {
+    start = cfi.start;
+    startSteps = cfi.path.steps.concat(start.steps);
+    startContainer = this.findNode(startSteps, doc, needsIgnoring ? ignoreClass : null);
+    end = cfi.end;
+    endSteps = cfi.path.steps.concat(end.steps);
+    endContainer = this.findNode(endSteps, doc, needsIgnoring ? ignoreClass : null);
+  } else {
+    start = cfi.path;
+    startSteps = cfi.path.steps;
+    startContainer = this.findNode(cfi.path.steps, doc, needsIgnoring ? ignoreClass : null);
+  }
 
+  if(startContainer) {
+    try {
 
-
-    if(startContainer) {
-      try {
-
-        if(start.terminal.offset != null) {
-          range.setStart(startContainer, start.terminal.offset);
-        } else {
-          range.setStart(startContainer, 0);
-        }
-
-      } catch (e) {
-        missed = this.fixMiss(startSteps, start.terminal.offset, doc, this.options.ignoreClass);
-        range.setStart(missed.container, missed.offset);
+      if(start.terminal.offset != null) {
+        range.setStart(startContainer, start.terminal.offset);
+      } else {
+        range.setStart(startContainer, 0);
       }
-    } else {
-      // No start found
-      return null;
+
+    } catch (e) {
+      missed = this.fixMiss(startSteps, start.terminal.offset, doc, needsIgnoring ? ignoreClass : null);
+      range.setStart(missed.container, missed.offset);
     }
+  } else {
+    // No start found
+    return null;
+  }
 
+  if (endContainer) {
+    try {
 
-    if (endContainer) {
-      try {
-
-        if(end.terminal.offset != null) {
-          range.setEnd(endContainer, end.terminal.offset);
-        } else {
-          range.setEnd(endContainer, 0);
-        }
-
-      } catch (e) {
-        missed = this.fixMiss(endSteps, cfi.end.terminal.offset, doc, this.options.ignoreClass);
-        range.setEnd(missed.container, missed.offset);
+      if(end.terminal.offset != null) {
+        range.setEnd(endContainer, end.terminal.offset);
+      } else {
+        range.setEnd(endContainer, 0);
       }
+
+    } catch (e) {
+      missed = this.fixMiss(endSteps, cfi.end.terminal.offset, doc, needsIgnoring ? ignoreClass : null);
+      range.setEnd(missed.container, missed.offset);
     }
+  }
 
 
   // doc.defaultView.getSelection().addRange(range);
@@ -6165,111 +6398,7 @@ EpubCFI.prototype.generateChapterComponent = function(_spineNodeIndex, _pos, id)
 
 module.exports = EpubCFI;
 
-},{"./core":8,"urijs":5}],10:[function(require,module,exports){
-// Based on - https://gist.github.com/kidoman/5625116
-function Highlighter(className) {
-  this.className = className || "annotator-hl";
-};
-
-Highlighter.prototype.add = function(range, className) {
-  var wrappers = [];
-  var wrapper;
-  if (!range || !range.startContainer) {
-    console.error("Not a valid Range");
-  }
-
-  if (className) {
-    this.className = className;
-  }
-
-  this.doc = range.startContainer.ownerDocument;
-
-  // Wrap all child text nodes
-  this.getTextNodes(range, this.doc).forEach(function(node) {
-    wrappers.push(this.wrapNode(node));
-  }.bind(this));
-
-
-  if (range.startContainer === range.endContainer) {
-    wrappers.push(this.wrapRange(range));
-  } else {
-    // Wrap start and end elements
-    wrappers.push(this.wrapPartial(range, range.startContainer, 'start'));
-    wrappers.push(this.wrapPartial(range, range.endContainer, 'end'));
-  }
-
-  return wrappers;
-};
-
-Highlighter.prototype.remove = function(range) {
-  // STUB
-};
-
-Highlighter.prototype.rejectEmpty = function(node) {
-  if (node.data.match(/^\s+$/)) return NodeFilter.FILTER_SKIP;
-
-  return NodeFilter.FILTER_ACCEPT;
-}
-
-Highlighter.prototype.getTextNodes = function(range, _doc) {
-  var doc = _doc || document;
-  var nodeIterator = doc.createNodeIterator(range.commonAncestorContainer, NodeFilter.SHOW_TEXT, this.rejectEmpty);
-  var mark = false;
-  var nodes = [];
-  var node;
-
-  while(node = nodeIterator.nextNode()) {
-    if (node == range.startContainer) {
-      mark = true;
-      continue
-    } else if (node === range.endContainer) {
-      break
-    }
-
-    if (mark) nodes.push(node);
-  }
-
-  return nodes
-
-};
-
-Highlighter.prototype.wrapRange = function(range) {
-  var wrapper = this.wrapperNode();
-  range.surroundContents(wrapper);
-  return wrapper;
-};
-
-Highlighter.prototype.wrapNode = function(node) {
-  var wrapper = this.wrapperNode();
-  var range = this.doc.createRange();
-  range.selectNodeContents(node);
-  range.surroundContents(wrapper);
-  return wrapper;
-};
-
-Highlighter.prototype.wrapPartial = function(range, node, position) {
-  var startOffset = position === 'start' ? range.startOffset : 0;
-  var endOffset = position === 'start' ? node.length : range.endOffset;
-  var range = this.doc.createRange();
-  var wrapper = this.wrapperNode();
-
-  range.setStart(node, startOffset);
-  range.setEnd(node, endOffset);
-
-  range.surroundContents(wrapper);
-  return wrapper;
-};
-
-Highlighter.prototype.wrapperNode = function(type) {
-  if (type === undefined) type = 'span';
-  var elem = document.createElement(type)
-  elem.classList.add(this.className);
-  return elem;
-};
-
-module.exports = Highlighter;
-
-},{}],11:[function(require,module,exports){
+},{"./core":9,"urijs":6}],11:[function(require,module,exports){
 var RSVP = require('rsvp');
 
 //-- Hooks allow for injecting functions that must all complete in order before finishing
@@ -6489,7 +6618,7 @@ module.exports = {
   'Scroll': Scroll
 };
 
-},{"./core":8}],13:[function(require,module,exports){
+},{"./core":9}],13:[function(require,module,exports){
 var core = require('./core');
 var Queue = require('./queue');
 var EpubCFI = require('./epubcfi');
@@ -6714,7 +6843,7 @@ RSVP.EventTarget.mixin(Locations.prototype);
 
 module.exports = Locations;
 
-},{"./core":8,"./epubcfi":9,"./queue":18,"rsvp":4}],14:[function(require,module,exports){
+},{"./core":9,"./epubcfi":10,"./queue":18,"rsvp":4}],14:[function(require,module,exports){
 function Map(layout){
   this.layout = layout;
 };
@@ -7047,7 +7176,7 @@ function Navigation(_package, _request){
       var loaded = loading.promise;
 
       request(navigation.ncxUrl, 'xml').then(function(xml){
-        navigation.toc = parse.ncx(xml);
+        navigation.toc = parse.toc(xml);
         navigation.loaded(navigation.toc);
         loading.resolve(navigation.toc);
       });
@@ -7107,7 +7236,7 @@ Navigation.prototype.get = function(target) {
 
 module.exports = Navigation;
 
-},{"./core":8,"./parser":17,"./request":21,"rsvp":4,"urijs":5}],16:[function(require,module,exports){
+},{"./core":9,"./parser":17,"./request":21,"rsvp":4,"urijs":6}],16:[function(require,module,exports){
 var RSVP = require('rsvp');
 var core = require('./core');
 var Continuous = require('./continuous');
@@ -7133,9 +7262,7 @@ function Paginate(book, options) {
 
   this.isForcedSingle = this.settings.forceSingle;
 
-  this.viewSettings = {
-    axis: this.settings.axis
-  };
+  this.viewSettings.axis = this.settings.axis;
 
   this.start();
 };
@@ -7395,7 +7522,7 @@ Paginate.prototype.adjustImages = function(view) {
 
 module.exports = Paginate;
 
-},{"./continuous":7,"./core":8,"./layout":12,"./map":14,"rsvp":4}],17:[function(require,module,exports){
+},{"./continuous":8,"./core":9,"./layout":12,"./map":14,"rsvp":4}],17:[function(require,module,exports){
 var URI = require('urijs');
 var core = require('./core');
 var EpubCFI = require('./epubcfi');
@@ -7859,7 +7986,7 @@ Parser.prototype.pageListItem = function(item, spineIndexByURL, bookSpine){
 
 module.exports = Parser;
 
-},{"./core":8,"./epubcfi":9,"urijs":5}],18:[function(require,module,exports){
+},{"./core":9,"./epubcfi":10,"urijs":6}],18:[function(require,module,exports){
 var RSVP = require('rsvp');
 var core = require('./core');
 
@@ -8054,7 +8181,7 @@ function Task(task, args, context){
 
 module.exports = Queue;
 
-},{"./core":8,"rsvp":4}],19:[function(require,module,exports){
+},{"./core":9,"rsvp":4}],19:[function(require,module,exports){
 var RSVP = require('rsvp');
 var URI = require('urijs');
 var core = require('./core');
@@ -8075,12 +8202,15 @@ function Rendition(book, options) {
 		width: false,
 		height: null,
 		layoutOveride : null, // Default: { spread: 'reflowable', layout: 'auto', orientation: 'auto'},
-		axis: "vertical"
+		axis: "vertical",
+		ignoreClass: ''
 	});
 
 	core.extend(this.settings, options);
 
-	this.viewSettings = {};
+	this.viewSettings = {
+		ignoreClass: this.settings.ignoreClass
+	};
 
 	this.book = book;
 
@@ -8807,16 +8937,15 @@ Rendition.prototype.replaceAssets = function(section, urls, replacementUrls){
 	section.output = replace.substitute(section.output, relUrls, replacementUrls);
 };
 
-Rendition.prototype.highlight = function(_cfi, className){
+Rendition.prototype.range = function(_cfi, ignoreClass){
   var cfi = new EpubCFI(_cfi);
-  var views = this.visible();
-	var found = views.filter(function (view) {
+  var found = this.visible().filter(function (view) {
 		if(cfi.spinePos === view.index) return true;
 	});
 
 	// Should only every return 1 item
   if (found.length) {
-    return found[0].highlight(cfi, className);
+    return found[0].range(cfi, ignoreClass);
   }
 };
 
@@ -8825,7 +8954,7 @@ RSVP.EventTarget.mixin(Rendition.prototype);
 
 module.exports = Rendition;
 
-},{"./core":8,"./epubcfi":9,"./hook":11,"./layout":12,"./map":14,"./queue":18,"./replacements":20,"./view":25,"./views":26,"rsvp":4,"urijs":5}],20:[function(require,module,exports){
+},{"./core":9,"./epubcfi":10,"./hook":11,"./layout":12,"./map":14,"./queue":18,"./replacements":20,"./view":25,"./views":26,"rsvp":4,"urijs":6}],20:[function(require,module,exports){
 var URI = require('urijs');
 var core = require('./core');
 
@@ -8889,7 +9018,7 @@ function links(view, renderer) {
       }
 
     }
-  };
+  }.bind(this);
 
   for (var i = 0; i < links.length; i++) {
     replaceLinks(links[i]);
@@ -8912,7 +9041,7 @@ module.exports = {
   'substitute': substitute
 };
 
-},{"./core":8,"urijs":5}],21:[function(require,module,exports){
+},{"./core":9,"urijs":6}],21:[function(require,module,exports){
 var RSVP = require('rsvp');
 var URI = require('urijs');
 var core = require('./core');
@@ -8968,7 +9097,7 @@ function request(url, type, withCredentials, headers) {
 
   if(core.isXml(type)) {
 		xhr.responseType = "document";
-		// xhr.overrideMimeType('text/xml'); // for OPF parsing
+		xhr.overrideMimeType('text/xml'); // for OPF parsing
 	}
 
 	if(type == 'xhtml') {
@@ -8996,6 +9125,15 @@ function request(url, type, withCredentials, headers) {
       if (this.status === 200 || this.responseXML ) { //-- Firefox is reporting 0 for blob urls
         var r;
 
+        if (!this.response && !this.responseXML) {
+          deferred.reject({
+            status: this.status,
+            message : "Empty Response",
+            stack : new Error().stack
+          });
+          return deferred.promise;
+        }
+
         if((this.responseType == '' || this.responseType == 'document')
             && this.responseXML){
           r = this.responseXML;
@@ -9006,6 +9144,7 @@ function request(url, type, withCredentials, headers) {
           r = new DOMParser().parseFromString(this.response, "text/xml");
         }else
         if(type == 'xhtml'){
+          console.log(this.response);
           r = new DOMParser().parseFromString(this.response, "application/xhtml+xml");
         }else
         if(type == 'html' || type == 'htm'){
@@ -9045,7 +9184,7 @@ function request(url, type, withCredentials, headers) {
 
 module.exports = request;
 
-},{"./core":8,"rsvp":4,"urijs":5}],22:[function(require,module,exports){
+},{"./core":9,"rsvp":4,"urijs":6}],22:[function(require,module,exports){
 var RSVP = require('rsvp');
 var URI = require('urijs');
 var core = require('./core');
@@ -9196,7 +9335,7 @@ Section.prototype.cfiFromElement = function(el) {
 
 module.exports = Section;
 
-},{"./core":8,"./epubcfi":9,"./hook":11,"./replacements":20,"./request":21,"rsvp":4,"urijs":5}],23:[function(require,module,exports){
+},{"./core":9,"./epubcfi":10,"./hook":11,"./replacements":20,"./request":21,"rsvp":4,"urijs":6}],23:[function(require,module,exports){
 var RSVP = require('rsvp');
 var core = require('./core');
 var EpubCFI = require('./epubcfi');
@@ -9320,7 +9459,7 @@ Spine.prototype.each = function() {
 
 module.exports = Spine;
 
-},{"./core":8,"./epubcfi":9,"./section":22,"rsvp":4}],24:[function(require,module,exports){
+},{"./core":9,"./epubcfi":10,"./section":22,"rsvp":4}],24:[function(require,module,exports){
 var RSVP = require('rsvp');
 var URI = require('urijs');
 var core = require('./core');
@@ -9470,14 +9609,15 @@ Unarchive.prototype.revokeUrl = function(url){
 
 module.exports = Unarchive;
 
-},{"../libs/mime/mime":1,"./core":8,"./request":21,"jszip":"jszip","rsvp":4,"urijs":5}],25:[function(require,module,exports){
+},{"../libs/mime/mime":1,"./core":9,"./request":21,"jszip":"jszip","rsvp":4,"urijs":6}],25:[function(require,module,exports){
 var RSVP = require('rsvp');
 var core = require('./core');
 var EpubCFI = require('./epubcfi');
-var Highlighter = require('./highlighter');
 
 function View(section, options) {
-  this.settings = options || {};
+  this.settings = core.extend({
+    ignoreClass : ''
+  }, options || {});
 
   this.id = "epubjs-view:" + core.uuid();
   this.section = section;
@@ -9501,9 +9641,6 @@ function View(section, options) {
 
   // Blank Cfi for Parsing
   this.epubcfi = new EpubCFI();
-
-  // Highlighter
-  this.highlighter = new Highlighter(this.settings.highlightClass);
 
   if(this.settings.axis && this.settings.axis == "horizontal"){
     this.element.style.display = "inline-block";
@@ -10053,24 +10190,7 @@ View.prototype.locationOf = function(target) {
   if(!this.document) return;
 
   if(this.epubcfi.isCfiString(target)) {
-    // cfi = this.epubcfi.parse(target);
-    //
-    // if(typeof document.evaluate === 'undefined') {
-    //   marker = this.epubcfi.addMarker(cfi, this.document);
-    //   if(marker) {
-    //     // Must Clean up Marker before going to page
-    //     this.epubcfi.removeMarker(marker, this.document);
-    //
-    //     targetPos = marker.getBoundingClientRect();
-    //   }
-    // } else {
-    //   range = this.epubcfi.generateRangeFromCfi(cfi, this.document);
-    //   if(range) {
-    //     targetPos = range.getBoundingClientRect();
-    //   }
-    // }
-
-    range = new EpubCFI(cfi).toRange(this.document);
+    range = new EpubCFI(cfi).toRange(this.document, this.settings.ignoreClass);
     if(range) {
       targetPos = range.getBoundingClientRect();
     }
@@ -10245,23 +10365,16 @@ View.prototype.triggerSelectedEvent = function(selection){
   }
 };
 
-View.prototype.highlight = function(_cfi, className){
+View.prototype.range = function(_cfi, ignoreClass){
   var cfi = new EpubCFI(_cfi);
-  return cfi.toRange(this.document);
-  var span = this.document.createElement("span");
-	var range;
-
-  if (cfi.spinePos === this.index) {
-    range = cfi.toRange(this.document);
-    return this.highlighter.add(range, className || "annotator-hl");
-  }
+  return cfi.toRange(this.document, ignoreClass || this.settings.ignoreClass);
 };
 
 RSVP.EventTarget.mixin(View.prototype);
 
 module.exports = View;
 
-},{"./core":8,"./epubcfi":9,"./highlighter":10,"rsvp":4}],26:[function(require,module,exports){
+},{"./core":9,"./epubcfi":10,"rsvp":4}],26:[function(require,module,exports){
 function Views(container) {
   this.container = container;
   this._views = [];
@@ -10431,7 +10544,7 @@ ePub.CFI = EpubCFI;
 
 module.exports = ePub;
 
-},{"./book":6,"./epubcfi":9}]},{},["epub"])("epub")
+},{"./book":7,"./epubcfi":10}]},{},["epub"])("epub")
 });
 
 
