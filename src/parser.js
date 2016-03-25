@@ -384,7 +384,7 @@ Parser.prototype.getSubitems = function(chapter) {
 
   for (var i = 0; i < rawSubChapters.length; i++) {
     subChapters.push({
-    	name: rawSubChapters[i].innerHTML,
+    	name: rawSubChapters[i].innerHTML.replace(/\s+/g,' '),
     	id: rawSubChapters[i].getAttribute('id'),
     	raw: rawSubChapters[i]
     });
