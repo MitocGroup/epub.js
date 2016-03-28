@@ -7176,11 +7176,9 @@ function Navigation(_package, _request){
       var loaded = loading.promise;
 
       request(navigation.ncxUrl, 'xml').then(function(xml){
-        parse.toc(xml, null, null, _package.baseUrl).then(function(toc) {
-          navigation.toc = toc;
-          navigation.loaded(navigation.toc);
-          loading.resolve(navigation.toc);
-        });
+        navigation.toc = parse.toc(xml);
+        navigation.loaded(navigation.toc);
+        loading.resolve(navigation.toc);
       });
 
       return loaded;
@@ -7527,7 +7525,6 @@ module.exports = Paginate;
 },{"./continuous":8,"./core":9,"./layout":12,"./map":14,"rsvp":4}],17:[function(require,module,exports){
 var URI = require('urijs');
 var core = require('./core');
-var RSVP = require('rsvp');
 var EpubCFI = require('./epubcfi');
 
 function Parser(){};
@@ -7874,53 +7871,31 @@ Parser.prototype.navItem = function(item, spineIndexByURL, bookSpine){
 	};
 };
 
-Parser.prototype.toc = function(tocXml, spineIndexByURL, bookSpine, baseUrl){
+Parser.prototype.toc = function(tocXml, spineIndexByURL, bookSpine){
 	var navPoints = tocXml.querySelectorAll("navMap navPoint");
 	var length = navPoints.length;
-	var loading = new RSVP.defer();
-	var loaded = loading.promise;
-	var i, j = 0;
+	var i;
 	var toc = {};
 	var list = [];
 	var item, parent;
 
-	if(!navPoints || length === 0) loading.resolve(list);
-
+	if(!navPoints || length === 0) return list;
 
 	for (i = 0; i < length; ++i) {
-		this.tocItem(navPoints[i], spineIndexByURL, bookSpine, baseUrl).then(function(item) {
+		item = this.tocItem(navPoints[i], spineIndexByURL, bookSpine);
+		toc[item.id] = item;
+		if(!item.parent) {
 			list.push(item);
-			
-			if (++j === length) {
-				return loading.resolve(list);
-			}
-		});
+		} else {
+			parent = toc[item.parent];
+			parent.subitems.push(item);
+		}
 	}
 
-	return loaded;
+	return list;
 };
 
-Parser.prototype.getSubitems = function(chapter) {
-  var rawSubChapters = chapter.getElementsByTagName('h2');
-  var subChapters = [];
-
-  if (subChapters && subChapters.length) {
-    return [];
-  }
-
-
-  for (var i = 0; i < rawSubChapters.length; i++) {
-    subChapters.push({
-    	name: rawSubChapters[i].innerHTML.replace(/\s+/g,' '),
-    	id: rawSubChapters[i].getAttribute('id'),
-    	raw: rawSubChapters[i]
-    });
-  }
-
-  return subChapters;
-};
-
-Parser.prototype.tocItem = function(item, spineIndexByURL, bookSpine, baseUrl){
+Parser.prototype.tocItem = function(item, spineIndexByURL, bookSpine){
 	var id = item.getAttribute('id') || false,
 			content = item.querySelector("content"),
 			src = content.getAttribute('src'),
@@ -7932,25 +7907,12 @@ Parser.prototype.tocItem = function(item, spineIndexByURL, bookSpine, baseUrl){
 			// spineItem = bookSpine[spinePos],
 			subitems = [],
 			parentNode = item.parentNode,
-			request = require('./request'),
-			loading = new RSVP.defer(),
-			loaded = loading.promise,
-			parent,
-      navUrl;
+			parent;
 			// cfi = spineItem ? spineItem.cfi : '';
 
-  navUrl = URI(content.getAttribute('src')).absoluteTo(baseUrl).toString();
-  request(navUrl, 'html').then(function(chapter) {
-    subitems = this.getSubitems(chapter);
-
-    return loading.resolve({
-      "id": id,
-      "href": src,
-      "label": text,
-      "subitems" : subitems,
-      "parent" : parent
-    });
-  }.bind(this));
+	if(parentNode && parentNode.nodeName === "navPoint") {
+		parent = parentNode.getAttribute('id');
+	}
 
   /*
 	if(!id) {
@@ -7965,7 +7927,13 @@ Parser.prototype.tocItem = function(item, spineIndexByURL, bookSpine, baseUrl){
 	}
   */
 
-  return loaded;
+	return {
+		"id": id,
+		"href": src,
+		"label": text,
+		"subitems" : subitems,
+		"parent" : parent
+	};
 };
 
 Parser.prototype.pageList = function(navHtml, spineIndexByURL, bookSpine){
@@ -8018,7 +7986,7 @@ Parser.prototype.pageListItem = function(item, spineIndexByURL, bookSpine){
 
 module.exports = Parser;
 
-},{"./core":9,"./epubcfi":10,"./request":21,"rsvp":4,"urijs":6}],18:[function(require,module,exports){
+},{"./core":9,"./epubcfi":10,"urijs":6}],18:[function(require,module,exports){
 var RSVP = require('rsvp');
 var core = require('./core');
 
@@ -9050,7 +9018,7 @@ function links(view, renderer) {
       }
 
     }
-  }.bind(this);
+  };
 
   for (var i = 0; i < links.length; i++) {
     replaceLinks(links[i]);

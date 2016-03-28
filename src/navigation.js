@@ -41,11 +41,9 @@ function Navigation(_package, _request){
       var loaded = loading.promise;
 
       request(navigation.ncxUrl, 'xml').then(function(xml){
-        parse.toc(xml, null, null, _package.baseUrl).then(function(toc) {
-          navigation.toc = toc;
-          navigation.loaded(navigation.toc);
-          loading.resolve(navigation.toc);
-        });
+        navigation.toc = parse.toc(xml);
+        navigation.loaded(navigation.toc);
+        loading.resolve(navigation.toc);
       });
 
       return loaded;
