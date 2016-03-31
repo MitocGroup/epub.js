@@ -161,9 +161,9 @@ Parser.prototype.metadata = function(xml){
 
 //-- Find Cover: <item properties="cover-image" id="ci" href="cover.svg" media-type="image/svg+xml" />
 //-- Fallback for Epub 2.0
-Parser.prototype.findCoverPath = function(packageXml){
+Parser.prototype.findCoverPath = function(packageXml, _forceV2){
 
-	var epubVersion = packageXml.querySelector('package').getAttribute('version');
+	var epubVersion = _forceV2 ? '2.0' : packageXml.querySelector('package').getAttribute('version');
 
 	if (epubVersion === '2.0') {
 		var metaCover = packageXml.querySelector('meta[name="cover"]');
@@ -178,7 +178,7 @@ Parser.prototype.findCoverPath = function(packageXml){
 	}
 	else {
 		var node = packageXml.querySelector("item[properties='cover-image']");
-		return node ? node.getAttribute('href') : false;
+		return node ? node.getAttribute('href') : this.findCoverPath(packageXml, true /* _forceV2 */);
 	}
 };
 
