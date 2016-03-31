@@ -172,8 +172,6 @@ module.exports = {
 }
 
 },{}],2:[function(require,module,exports){
-
-},{}],3:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -266,7 +264,7 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],4:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 (function (process,global){
 /*!
  * @overview RSVP - a tiny implementation of Promises/A+.
@@ -1868,7 +1866,438 @@ process.umask = function() { return 0; };
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"_process":3}],5:[function(require,module,exports){
+},{"_process":2}],4:[function(require,module,exports){
+/*!
+ * URI.js - Mutating URLs
+ * IPv6 Support
+ *
+ * Version: 1.17.1
+ *
+ * Author: Rodney Rehm
+ * Web: http://medialize.github.io/URI.js/
+ *
+ * Licensed under
+ *   MIT License http://www.opensource.org/licenses/mit-license
+ *
+ */
+
+(function (root, factory) {
+  'use strict';
+  // https://github.com/umdjs/umd/blob/master/returnExports.js
+  if (typeof exports === 'object') {
+    // Node
+    module.exports = factory();
+  } else if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(factory);
+  } else {
+    // Browser globals (root is window)
+    root.IPv6 = factory(root);
+  }
+}(this, function (root) {
+  'use strict';
+
+  /*
+  var _in = "fe80:0000:0000:0000:0204:61ff:fe9d:f156";
+  var _out = IPv6.best(_in);
+  var _expected = "fe80::204:61ff:fe9d:f156";
+
+  console.log(_in, _out, _expected, _out === _expected);
+  */
+
+  // save current IPv6 variable, if any
+  var _IPv6 = root && root.IPv6;
+
+  function bestPresentation(address) {
+    // based on:
+    // Javascript to test an IPv6 address for proper format, and to
+    // present the "best text representation" according to IETF Draft RFC at
+    // http://tools.ietf.org/html/draft-ietf-6man-text-addr-representation-04
+    // 8 Feb 2010 Rich Brown, Dartware, LLC
+    // Please feel free to use this code as long as you provide a link to
+    // http://www.intermapper.com
+    // http://intermapper.com/support/tools/IPV6-Validator.aspx
+    // http://download.dartware.com/thirdparty/ipv6validator.js
+
+    var _address = address.toLowerCase();
+    var segments = _address.split(':');
+    var length = segments.length;
+    var total = 8;
+
+    // trim colons (:: or ::a:b:c… or …a:b:c::)
+    if (segments[0] === '' && segments[1] === '' && segments[2] === '') {
+      // must have been ::
+      // remove first two items
+      segments.shift();
+      segments.shift();
+    } else if (segments[0] === '' && segments[1] === '') {
+      // must have been ::xxxx
+      // remove the first item
+      segments.shift();
+    } else if (segments[length - 1] === '' && segments[length - 2] === '') {
+      // must have been xxxx::
+      segments.pop();
+    }
+
+    length = segments.length;
+
+    // adjust total segments for IPv4 trailer
+    if (segments[length - 1].indexOf('.') !== -1) {
+      // found a "." which means IPv4
+      total = 7;
+    }
+
+    // fill empty segments them with "0000"
+    var pos;
+    for (pos = 0; pos < length; pos++) {
+      if (segments[pos] === '') {
+        break;
+      }
+    }
+
+    if (pos < total) {
+      segments.splice(pos, 1, '0000');
+      while (segments.length < total) {
+        segments.splice(pos, 0, '0000');
+      }
+
+      length = segments.length;
+    }
+
+    // strip leading zeros
+    var _segments;
+    for (var i = 0; i < total; i++) {
+      _segments = segments[i].split('');
+      for (var j = 0; j < 3 ; j++) {
+        if (_segments[0] === '0' && _segments.length > 1) {
+          _segments.splice(0,1);
+        } else {
+          break;
+        }
+      }
+
+      segments[i] = _segments.join('');
+    }
+
+    // find longest sequence of zeroes and coalesce them into one segment
+    var best = -1;
+    var _best = 0;
+    var _current = 0;
+    var current = -1;
+    var inzeroes = false;
+    // i; already declared
+
+    for (i = 0; i < total; i++) {
+      if (inzeroes) {
+        if (segments[i] === '0') {
+          _current += 1;
+        } else {
+          inzeroes = false;
+          if (_current > _best) {
+            best = current;
+            _best = _current;
+          }
+        }
+      } else {
+        if (segments[i] === '0') {
+          inzeroes = true;
+          current = i;
+          _current = 1;
+        }
+      }
+    }
+
+    if (_current > _best) {
+      best = current;
+      _best = _current;
+    }
+
+    if (_best > 1) {
+      segments.splice(best, _best, '');
+    }
+
+    length = segments.length;
+
+    // assemble remaining segments
+    var result = '';
+    if (segments[0] === '')  {
+      result = ':';
+    }
+
+    for (i = 0; i < length; i++) {
+      result += segments[i];
+      if (i === length - 1) {
+        break;
+      }
+
+      result += ':';
+    }
+
+    if (segments[length - 1] === '') {
+      result += ':';
+    }
+
+    return result;
+  }
+
+  function noConflict() {
+    /*jshint validthis: true */
+    if (root.IPv6 === this) {
+      root.IPv6 = _IPv6;
+    }
+  
+    return this;
+  }
+
+  return {
+    best: bestPresentation,
+    noConflict: noConflict
+  };
+}));
+
+},{}],5:[function(require,module,exports){
+/*!
+ * URI.js - Mutating URLs
+ * Second Level Domain (SLD) Support
+ *
+ * Version: 1.17.1
+ *
+ * Author: Rodney Rehm
+ * Web: http://medialize.github.io/URI.js/
+ *
+ * Licensed under
+ *   MIT License http://www.opensource.org/licenses/mit-license
+ *
+ */
+
+(function (root, factory) {
+  'use strict';
+  // https://github.com/umdjs/umd/blob/master/returnExports.js
+  if (typeof exports === 'object') {
+    // Node
+    module.exports = factory();
+  } else if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(factory);
+  } else {
+    // Browser globals (root is window)
+    root.SecondLevelDomains = factory(root);
+  }
+}(this, function (root) {
+  'use strict';
+
+  // save current SecondLevelDomains variable, if any
+  var _SecondLevelDomains = root && root.SecondLevelDomains;
+
+  var SLD = {
+    // list of known Second Level Domains
+    // converted list of SLDs from https://github.com/gavingmiller/second-level-domains
+    // ----
+    // publicsuffix.org is more current and actually used by a couple of browsers internally.
+    // downside is it also contains domains like "dyndns.org" - which is fine for the security
+    // issues browser have to deal with (SOP for cookies, etc) - but is way overboard for URI.js
+    // ----
+    list: {
+      'ac':' com gov mil net org ',
+      'ae':' ac co gov mil name net org pro sch ',
+      'af':' com edu gov net org ',
+      'al':' com edu gov mil net org ',
+      'ao':' co ed gv it og pb ',
+      'ar':' com edu gob gov int mil net org tur ',
+      'at':' ac co gv or ',
+      'au':' asn com csiro edu gov id net org ',
+      'ba':' co com edu gov mil net org rs unbi unmo unsa untz unze ',
+      'bb':' biz co com edu gov info net org store tv ',
+      'bh':' biz cc com edu gov info net org ',
+      'bn':' com edu gov net org ',
+      'bo':' com edu gob gov int mil net org tv ',
+      'br':' adm adv agr am arq art ato b bio blog bmd cim cng cnt com coop ecn edu eng esp etc eti far flog fm fnd fot fst g12 ggf gov imb ind inf jor jus lel mat med mil mus net nom not ntr odo org ppg pro psc psi qsl rec slg srv tmp trd tur tv vet vlog wiki zlg ',
+      'bs':' com edu gov net org ',
+      'bz':' du et om ov rg ',
+      'ca':' ab bc mb nb nf nl ns nt nu on pe qc sk yk ',
+      'ck':' biz co edu gen gov info net org ',
+      'cn':' ac ah bj com cq edu fj gd gov gs gx gz ha hb he hi hl hn jl js jx ln mil net nm nx org qh sc sd sh sn sx tj tw xj xz yn zj ',
+      'co':' com edu gov mil net nom org ',
+      'cr':' ac c co ed fi go or sa ',
+      'cy':' ac biz com ekloges gov ltd name net org parliament press pro tm ',
+      'do':' art com edu gob gov mil net org sld web ',
+      'dz':' art asso com edu gov net org pol ',
+      'ec':' com edu fin gov info med mil net org pro ',
+      'eg':' com edu eun gov mil name net org sci ',
+      'er':' com edu gov ind mil net org rochest w ',
+      'es':' com edu gob nom org ',
+      'et':' biz com edu gov info name net org ',
+      'fj':' ac biz com info mil name net org pro ',
+      'fk':' ac co gov net nom org ',
+      'fr':' asso com f gouv nom prd presse tm ',
+      'gg':' co net org ',
+      'gh':' com edu gov mil org ',
+      'gn':' ac com gov net org ',
+      'gr':' com edu gov mil net org ',
+      'gt':' com edu gob ind mil net org ',
+      'gu':' com edu gov net org ',
+      'hk':' com edu gov idv net org ',
+      'hu':' 2000 agrar bolt casino city co erotica erotika film forum games hotel info ingatlan jogasz konyvelo lakas media news org priv reklam sex shop sport suli szex tm tozsde utazas video ',
+      'id':' ac co go mil net or sch web ',
+      'il':' ac co gov idf k12 muni net org ',
+      'in':' ac co edu ernet firm gen gov i ind mil net nic org res ',
+      'iq':' com edu gov i mil net org ',
+      'ir':' ac co dnssec gov i id net org sch ',
+      'it':' edu gov ',
+      'je':' co net org ',
+      'jo':' com edu gov mil name net org sch ',
+      'jp':' ac ad co ed go gr lg ne or ',
+      'ke':' ac co go info me mobi ne or sc ',
+      'kh':' com edu gov mil net org per ',
+      'ki':' biz com de edu gov info mob net org tel ',
+      'km':' asso com coop edu gouv k medecin mil nom notaires pharmaciens presse tm veterinaire ',
+      'kn':' edu gov net org ',
+      'kr':' ac busan chungbuk chungnam co daegu daejeon es gangwon go gwangju gyeongbuk gyeonggi gyeongnam hs incheon jeju jeonbuk jeonnam k kg mil ms ne or pe re sc seoul ulsan ',
+      'kw':' com edu gov net org ',
+      'ky':' com edu gov net org ',
+      'kz':' com edu gov mil net org ',
+      'lb':' com edu gov net org ',
+      'lk':' assn com edu gov grp hotel int ltd net ngo org sch soc web ',
+      'lr':' com edu gov net org ',
+      'lv':' asn com conf edu gov id mil net org ',
+      'ly':' com edu gov id med net org plc sch ',
+      'ma':' ac co gov m net org press ',
+      'mc':' asso tm ',
+      'me':' ac co edu gov its net org priv ',
+      'mg':' com edu gov mil nom org prd tm ',
+      'mk':' com edu gov inf name net org pro ',
+      'ml':' com edu gov net org presse ',
+      'mn':' edu gov org ',
+      'mo':' com edu gov net org ',
+      'mt':' com edu gov net org ',
+      'mv':' aero biz com coop edu gov info int mil museum name net org pro ',
+      'mw':' ac co com coop edu gov int museum net org ',
+      'mx':' com edu gob net org ',
+      'my':' com edu gov mil name net org sch ',
+      'nf':' arts com firm info net other per rec store web ',
+      'ng':' biz com edu gov mil mobi name net org sch ',
+      'ni':' ac co com edu gob mil net nom org ',
+      'np':' com edu gov mil net org ',
+      'nr':' biz com edu gov info net org ',
+      'om':' ac biz co com edu gov med mil museum net org pro sch ',
+      'pe':' com edu gob mil net nom org sld ',
+      'ph':' com edu gov i mil net ngo org ',
+      'pk':' biz com edu fam gob gok gon gop gos gov net org web ',
+      'pl':' art bialystok biz com edu gda gdansk gorzow gov info katowice krakow lodz lublin mil net ngo olsztyn org poznan pwr radom slupsk szczecin torun warszawa waw wroc wroclaw zgora ',
+      'pr':' ac biz com edu est gov info isla name net org pro prof ',
+      'ps':' com edu gov net org plo sec ',
+      'pw':' belau co ed go ne or ',
+      'ro':' arts com firm info nom nt org rec store tm www ',
+      'rs':' ac co edu gov in org ',
+      'sb':' com edu gov net org ',
+      'sc':' com edu gov net org ',
+      'sh':' co com edu gov net nom org ',
+      'sl':' com edu gov net org ',
+      'st':' co com consulado edu embaixada gov mil net org principe saotome store ',
+      'sv':' com edu gob org red ',
+      'sz':' ac co org ',
+      'tr':' av bbs bel biz com dr edu gen gov info k12 name net org pol tel tsk tv web ',
+      'tt':' aero biz cat co com coop edu gov info int jobs mil mobi museum name net org pro tel travel ',
+      'tw':' club com ebiz edu game gov idv mil net org ',
+      'mu':' ac co com gov net or org ',
+      'mz':' ac co edu gov org ',
+      'na':' co com ',
+      'nz':' ac co cri geek gen govt health iwi maori mil net org parliament school ',
+      'pa':' abo ac com edu gob ing med net nom org sld ',
+      'pt':' com edu gov int net nome org publ ',
+      'py':' com edu gov mil net org ',
+      'qa':' com edu gov mil net org ',
+      're':' asso com nom ',
+      'ru':' ac adygeya altai amur arkhangelsk astrakhan bashkiria belgorod bir bryansk buryatia cbg chel chelyabinsk chita chukotka chuvashia com dagestan e-burg edu gov grozny int irkutsk ivanovo izhevsk jar joshkar-ola kalmykia kaluga kamchatka karelia kazan kchr kemerovo khabarovsk khakassia khv kirov koenig komi kostroma kranoyarsk kuban kurgan kursk lipetsk magadan mari mari-el marine mil mordovia mosreg msk murmansk nalchik net nnov nov novosibirsk nsk omsk orenburg org oryol penza perm pp pskov ptz rnd ryazan sakhalin samara saratov simbirsk smolensk spb stavropol stv surgut tambov tatarstan tom tomsk tsaritsyn tsk tula tuva tver tyumen udm udmurtia ulan-ude vladikavkaz vladimir vladivostok volgograd vologda voronezh vrn vyatka yakutia yamal yekaterinburg yuzhno-sakhalinsk ',
+      'rw':' ac co com edu gouv gov int mil net ',
+      'sa':' com edu gov med net org pub sch ',
+      'sd':' com edu gov info med net org tv ',
+      'se':' a ac b bd c d e f g h i k l m n o org p parti pp press r s t tm u w x y z ',
+      'sg':' com edu gov idn net org per ',
+      'sn':' art com edu gouv org perso univ ',
+      'sy':' com edu gov mil net news org ',
+      'th':' ac co go in mi net or ',
+      'tj':' ac biz co com edu go gov info int mil name net nic org test web ',
+      'tn':' agrinet com defense edunet ens fin gov ind info intl mincom nat net org perso rnrt rns rnu tourism ',
+      'tz':' ac co go ne or ',
+      'ua':' biz cherkassy chernigov chernovtsy ck cn co com crimea cv dn dnepropetrovsk donetsk dp edu gov if in ivano-frankivsk kh kharkov kherson khmelnitskiy kiev kirovograd km kr ks kv lg lugansk lutsk lviv me mk net nikolaev od odessa org pl poltava pp rovno rv sebastopol sumy te ternopil uzhgorod vinnica vn zaporizhzhe zhitomir zp zt ',
+      'ug':' ac co go ne or org sc ',
+      'uk':' ac bl british-library co cym gov govt icnet jet lea ltd me mil mod national-library-scotland nel net nhs nic nls org orgn parliament plc police sch scot soc ',
+      'us':' dni fed isa kids nsn ',
+      'uy':' com edu gub mil net org ',
+      've':' co com edu gob info mil net org web ',
+      'vi':' co com k12 net org ',
+      'vn':' ac biz com edu gov health info int name net org pro ',
+      'ye':' co com gov ltd me net org plc ',
+      'yu':' ac co edu gov org ',
+      'za':' ac agric alt bourse city co cybernet db edu gov grondar iaccess imt inca landesign law mil net ngo nis nom olivetti org pix school tm web ',
+      'zm':' ac co com edu gov net org sch '
+    },
+    // gorhill 2013-10-25: Using indexOf() instead Regexp(). Significant boost
+    // in both performance and memory footprint. No initialization required.
+    // http://jsperf.com/uri-js-sld-regex-vs-binary-search/4
+    // Following methods use lastIndexOf() rather than array.split() in order
+    // to avoid any memory allocations.
+    has: function(domain) {
+      var tldOffset = domain.lastIndexOf('.');
+      if (tldOffset <= 0 || tldOffset >= (domain.length-1)) {
+        return false;
+      }
+      var sldOffset = domain.lastIndexOf('.', tldOffset-1);
+      if (sldOffset <= 0 || sldOffset >= (tldOffset-1)) {
+        return false;
+      }
+      var sldList = SLD.list[domain.slice(tldOffset+1)];
+      if (!sldList) {
+        return false;
+      }
+      return sldList.indexOf(' ' + domain.slice(sldOffset+1, tldOffset) + ' ') >= 0;
+    },
+    is: function(domain) {
+      var tldOffset = domain.lastIndexOf('.');
+      if (tldOffset <= 0 || tldOffset >= (domain.length-1)) {
+        return false;
+      }
+      var sldOffset = domain.lastIndexOf('.', tldOffset-1);
+      if (sldOffset >= 0) {
+        return false;
+      }
+      var sldList = SLD.list[domain.slice(tldOffset+1)];
+      if (!sldList) {
+        return false;
+      }
+      return sldList.indexOf(' ' + domain.slice(0, tldOffset) + ' ') >= 0;
+    },
+    get: function(domain) {
+      var tldOffset = domain.lastIndexOf('.');
+      if (tldOffset <= 0 || tldOffset >= (domain.length-1)) {
+        return null;
+      }
+      var sldOffset = domain.lastIndexOf('.', tldOffset-1);
+      if (sldOffset <= 0 || sldOffset >= (tldOffset-1)) {
+        return null;
+      }
+      var sldList = SLD.list[domain.slice(tldOffset+1)];
+      if (!sldList) {
+        return null;
+      }
+      if (sldList.indexOf(' ' + domain.slice(sldOffset+1, tldOffset) + ' ') < 0) {
+        return null;
+      }
+      return domain.slice(sldOffset+1);
+    },
+    noConflict: function(){
+      if (root.SecondLevelDomains === this) {
+        root.SecondLevelDomains = _SecondLevelDomains;
+      }
+      return this;
+    }
+  };
+
+  return SLD;
+}));
+
+},{}],6:[function(require,module,exports){
 /*!
  * URI.js - Mutating URLs
  *
@@ -4049,7 +4478,545 @@ process.umask = function() { return 0; };
   return URI;
 }));
 
-},{"./IPv6":2,"./SecondLevelDomains":2,"./punycode":2}],6:[function(require,module,exports){
+},{"./IPv6":4,"./SecondLevelDomains":5,"./punycode":7}],7:[function(require,module,exports){
+(function (global){
+/*! https://mths.be/punycode v1.4.0 by @mathias */
+;(function(root) {
+
+	/** Detect free variables */
+	var freeExports = typeof exports == 'object' && exports &&
+		!exports.nodeType && exports;
+	var freeModule = typeof module == 'object' && module &&
+		!module.nodeType && module;
+	var freeGlobal = typeof global == 'object' && global;
+	if (
+		freeGlobal.global === freeGlobal ||
+		freeGlobal.window === freeGlobal ||
+		freeGlobal.self === freeGlobal
+	) {
+		root = freeGlobal;
+	}
+
+	/**
+	 * The `punycode` object.
+	 * @name punycode
+	 * @type Object
+	 */
+	var punycode,
+
+	/** Highest positive signed 32-bit float value */
+	maxInt = 2147483647, // aka. 0x7FFFFFFF or 2^31-1
+
+	/** Bootstring parameters */
+	base = 36,
+	tMin = 1,
+	tMax = 26,
+	skew = 38,
+	damp = 700,
+	initialBias = 72,
+	initialN = 128, // 0x80
+	delimiter = '-', // '\x2D'
+
+	/** Regular expressions */
+	regexPunycode = /^xn--/,
+	regexNonASCII = /[^\x20-\x7E]/, // unprintable ASCII chars + non-ASCII chars
+	regexSeparators = /[\x2E\u3002\uFF0E\uFF61]/g, // RFC 3490 separators
+
+	/** Error messages */
+	errors = {
+		'overflow': 'Overflow: input needs wider integers to process',
+		'not-basic': 'Illegal input >= 0x80 (not a basic code point)',
+		'invalid-input': 'Invalid input'
+	},
+
+	/** Convenience shortcuts */
+	baseMinusTMin = base - tMin,
+	floor = Math.floor,
+	stringFromCharCode = String.fromCharCode,
+
+	/** Temporary variable */
+	key;
+
+	/*--------------------------------------------------------------------------*/
+
+	/**
+	 * A generic error utility function.
+	 * @private
+	 * @param {String} type The error type.
+	 * @returns {Error} Throws a `RangeError` with the applicable error message.
+	 */
+	function error(type) {
+		throw new RangeError(errors[type]);
+	}
+
+	/**
+	 * A generic `Array#map` utility function.
+	 * @private
+	 * @param {Array} array The array to iterate over.
+	 * @param {Function} callback The function that gets called for every array
+	 * item.
+	 * @returns {Array} A new array of values returned by the callback function.
+	 */
+	function map(array, fn) {
+		var length = array.length;
+		var result = [];
+		while (length--) {
+			result[length] = fn(array[length]);
+		}
+		return result;
+	}
+
+	/**
+	 * A simple `Array#map`-like wrapper to work with domain name strings or email
+	 * addresses.
+	 * @private
+	 * @param {String} domain The domain name or email address.
+	 * @param {Function} callback The function that gets called for every
+	 * character.
+	 * @returns {Array} A new string of characters returned by the callback
+	 * function.
+	 */
+	function mapDomain(string, fn) {
+		var parts = string.split('@');
+		var result = '';
+		if (parts.length > 1) {
+			// In email addresses, only the domain name should be punycoded. Leave
+			// the local part (i.e. everything up to `@`) intact.
+			result = parts[0] + '@';
+			string = parts[1];
+		}
+		// Avoid `split(regex)` for IE8 compatibility. See #17.
+		string = string.replace(regexSeparators, '\x2E');
+		var labels = string.split('.');
+		var encoded = map(labels, fn).join('.');
+		return result + encoded;
+	}
+
+	/**
+	 * Creates an array containing the numeric code points of each Unicode
+	 * character in the string. While JavaScript uses UCS-2 internally,
+	 * this function will convert a pair of surrogate halves (each of which
+	 * UCS-2 exposes as separate characters) into a single code point,
+	 * matching UTF-16.
+	 * @see `punycode.ucs2.encode`
+	 * @see <https://mathiasbynens.be/notes/javascript-encoding>
+	 * @memberOf punycode.ucs2
+	 * @name decode
+	 * @param {String} string The Unicode input string (UCS-2).
+	 * @returns {Array} The new array of code points.
+	 */
+	function ucs2decode(string) {
+		var output = [],
+		    counter = 0,
+		    length = string.length,
+		    value,
+		    extra;
+		while (counter < length) {
+			value = string.charCodeAt(counter++);
+			if (value >= 0xD800 && value <= 0xDBFF && counter < length) {
+				// high surrogate, and there is a next character
+				extra = string.charCodeAt(counter++);
+				if ((extra & 0xFC00) == 0xDC00) { // low surrogate
+					output.push(((value & 0x3FF) << 10) + (extra & 0x3FF) + 0x10000);
+				} else {
+					// unmatched surrogate; only append this code unit, in case the next
+					// code unit is the high surrogate of a surrogate pair
+					output.push(value);
+					counter--;
+				}
+			} else {
+				output.push(value);
+			}
+		}
+		return output;
+	}
+
+	/**
+	 * Creates a string based on an array of numeric code points.
+	 * @see `punycode.ucs2.decode`
+	 * @memberOf punycode.ucs2
+	 * @name encode
+	 * @param {Array} codePoints The array of numeric code points.
+	 * @returns {String} The new Unicode string (UCS-2).
+	 */
+	function ucs2encode(array) {
+		return map(array, function(value) {
+			var output = '';
+			if (value > 0xFFFF) {
+				value -= 0x10000;
+				output += stringFromCharCode(value >>> 10 & 0x3FF | 0xD800);
+				value = 0xDC00 | value & 0x3FF;
+			}
+			output += stringFromCharCode(value);
+			return output;
+		}).join('');
+	}
+
+	/**
+	 * Converts a basic code point into a digit/integer.
+	 * @see `digitToBasic()`
+	 * @private
+	 * @param {Number} codePoint The basic numeric code point value.
+	 * @returns {Number} The numeric value of a basic code point (for use in
+	 * representing integers) in the range `0` to `base - 1`, or `base` if
+	 * the code point does not represent a value.
+	 */
+	function basicToDigit(codePoint) {
+		if (codePoint - 48 < 10) {
+			return codePoint - 22;
+		}
+		if (codePoint - 65 < 26) {
+			return codePoint - 65;
+		}
+		if (codePoint - 97 < 26) {
+			return codePoint - 97;
+		}
+		return base;
+	}
+
+	/**
+	 * Converts a digit/integer into a basic code point.
+	 * @see `basicToDigit()`
+	 * @private
+	 * @param {Number} digit The numeric value of a basic code point.
+	 * @returns {Number} The basic code point whose value (when used for
+	 * representing integers) is `digit`, which needs to be in the range
+	 * `0` to `base - 1`. If `flag` is non-zero, the uppercase form is
+	 * used; else, the lowercase form is used. The behavior is undefined
+	 * if `flag` is non-zero and `digit` has no uppercase form.
+	 */
+	function digitToBasic(digit, flag) {
+		//  0..25 map to ASCII a..z or A..Z
+		// 26..35 map to ASCII 0..9
+		return digit + 22 + 75 * (digit < 26) - ((flag != 0) << 5);
+	}
+
+	/**
+	 * Bias adaptation function as per section 3.4 of RFC 3492.
+	 * https://tools.ietf.org/html/rfc3492#section-3.4
+	 * @private
+	 */
+	function adapt(delta, numPoints, firstTime) {
+		var k = 0;
+		delta = firstTime ? floor(delta / damp) : delta >> 1;
+		delta += floor(delta / numPoints);
+		for (/* no initialization */; delta > baseMinusTMin * tMax >> 1; k += base) {
+			delta = floor(delta / baseMinusTMin);
+		}
+		return floor(k + (baseMinusTMin + 1) * delta / (delta + skew));
+	}
+
+	/**
+	 * Converts a Punycode string of ASCII-only symbols to a string of Unicode
+	 * symbols.
+	 * @memberOf punycode
+	 * @param {String} input The Punycode string of ASCII-only symbols.
+	 * @returns {String} The resulting string of Unicode symbols.
+	 */
+	function decode(input) {
+		// Don't use UCS-2
+		var output = [],
+		    inputLength = input.length,
+		    out,
+		    i = 0,
+		    n = initialN,
+		    bias = initialBias,
+		    basic,
+		    j,
+		    index,
+		    oldi,
+		    w,
+		    k,
+		    digit,
+		    t,
+		    /** Cached calculation results */
+		    baseMinusT;
+
+		// Handle the basic code points: let `basic` be the number of input code
+		// points before the last delimiter, or `0` if there is none, then copy
+		// the first basic code points to the output.
+
+		basic = input.lastIndexOf(delimiter);
+		if (basic < 0) {
+			basic = 0;
+		}
+
+		for (j = 0; j < basic; ++j) {
+			// if it's not a basic code point
+			if (input.charCodeAt(j) >= 0x80) {
+				error('not-basic');
+			}
+			output.push(input.charCodeAt(j));
+		}
+
+		// Main decoding loop: start just after the last delimiter if any basic code
+		// points were copied; start at the beginning otherwise.
+
+		for (index = basic > 0 ? basic + 1 : 0; index < inputLength; /* no final expression */) {
+
+			// `index` is the index of the next character to be consumed.
+			// Decode a generalized variable-length integer into `delta`,
+			// which gets added to `i`. The overflow checking is easier
+			// if we increase `i` as we go, then subtract off its starting
+			// value at the end to obtain `delta`.
+			for (oldi = i, w = 1, k = base; /* no condition */; k += base) {
+
+				if (index >= inputLength) {
+					error('invalid-input');
+				}
+
+				digit = basicToDigit(input.charCodeAt(index++));
+
+				if (digit >= base || digit > floor((maxInt - i) / w)) {
+					error('overflow');
+				}
+
+				i += digit * w;
+				t = k <= bias ? tMin : (k >= bias + tMax ? tMax : k - bias);
+
+				if (digit < t) {
+					break;
+				}
+
+				baseMinusT = base - t;
+				if (w > floor(maxInt / baseMinusT)) {
+					error('overflow');
+				}
+
+				w *= baseMinusT;
+
+			}
+
+			out = output.length + 1;
+			bias = adapt(i - oldi, out, oldi == 0);
+
+			// `i` was supposed to wrap around from `out` to `0`,
+			// incrementing `n` each time, so we'll fix that now:
+			if (floor(i / out) > maxInt - n) {
+				error('overflow');
+			}
+
+			n += floor(i / out);
+			i %= out;
+
+			// Insert `n` at position `i` of the output
+			output.splice(i++, 0, n);
+
+		}
+
+		return ucs2encode(output);
+	}
+
+	/**
+	 * Converts a string of Unicode symbols (e.g. a domain name label) to a
+	 * Punycode string of ASCII-only symbols.
+	 * @memberOf punycode
+	 * @param {String} input The string of Unicode symbols.
+	 * @returns {String} The resulting Punycode string of ASCII-only symbols.
+	 */
+	function encode(input) {
+		var n,
+		    delta,
+		    handledCPCount,
+		    basicLength,
+		    bias,
+		    j,
+		    m,
+		    q,
+		    k,
+		    t,
+		    currentValue,
+		    output = [],
+		    /** `inputLength` will hold the number of code points in `input`. */
+		    inputLength,
+		    /** Cached calculation results */
+		    handledCPCountPlusOne,
+		    baseMinusT,
+		    qMinusT;
+
+		// Convert the input in UCS-2 to Unicode
+		input = ucs2decode(input);
+
+		// Cache the length
+		inputLength = input.length;
+
+		// Initialize the state
+		n = initialN;
+		delta = 0;
+		bias = initialBias;
+
+		// Handle the basic code points
+		for (j = 0; j < inputLength; ++j) {
+			currentValue = input[j];
+			if (currentValue < 0x80) {
+				output.push(stringFromCharCode(currentValue));
+			}
+		}
+
+		handledCPCount = basicLength = output.length;
+
+		// `handledCPCount` is the number of code points that have been handled;
+		// `basicLength` is the number of basic code points.
+
+		// Finish the basic string - if it is not empty - with a delimiter
+		if (basicLength) {
+			output.push(delimiter);
+		}
+
+		// Main encoding loop:
+		while (handledCPCount < inputLength) {
+
+			// All non-basic code points < n have been handled already. Find the next
+			// larger one:
+			for (m = maxInt, j = 0; j < inputLength; ++j) {
+				currentValue = input[j];
+				if (currentValue >= n && currentValue < m) {
+					m = currentValue;
+				}
+			}
+
+			// Increase `delta` enough to advance the decoder's <n,i> state to <m,0>,
+			// but guard against overflow
+			handledCPCountPlusOne = handledCPCount + 1;
+			if (m - n > floor((maxInt - delta) / handledCPCountPlusOne)) {
+				error('overflow');
+			}
+
+			delta += (m - n) * handledCPCountPlusOne;
+			n = m;
+
+			for (j = 0; j < inputLength; ++j) {
+				currentValue = input[j];
+
+				if (currentValue < n && ++delta > maxInt) {
+					error('overflow');
+				}
+
+				if (currentValue == n) {
+					// Represent delta as a generalized variable-length integer
+					for (q = delta, k = base; /* no condition */; k += base) {
+						t = k <= bias ? tMin : (k >= bias + tMax ? tMax : k - bias);
+						if (q < t) {
+							break;
+						}
+						qMinusT = q - t;
+						baseMinusT = base - t;
+						output.push(
+							stringFromCharCode(digitToBasic(t + qMinusT % baseMinusT, 0))
+						);
+						q = floor(qMinusT / baseMinusT);
+					}
+
+					output.push(stringFromCharCode(digitToBasic(q, 0)));
+					bias = adapt(delta, handledCPCountPlusOne, handledCPCount == basicLength);
+					delta = 0;
+					++handledCPCount;
+				}
+			}
+
+			++delta;
+			++n;
+
+		}
+		return output.join('');
+	}
+
+	/**
+	 * Converts a Punycode string representing a domain name or an email address
+	 * to Unicode. Only the Punycoded parts of the input will be converted, i.e.
+	 * it doesn't matter if you call it on a string that has already been
+	 * converted to Unicode.
+	 * @memberOf punycode
+	 * @param {String} input The Punycoded domain name or email address to
+	 * convert to Unicode.
+	 * @returns {String} The Unicode representation of the given Punycode
+	 * string.
+	 */
+	function toUnicode(input) {
+		return mapDomain(input, function(string) {
+			return regexPunycode.test(string)
+				? decode(string.slice(4).toLowerCase())
+				: string;
+		});
+	}
+
+	/**
+	 * Converts a Unicode string representing a domain name or an email address to
+	 * Punycode. Only the non-ASCII parts of the domain name will be converted,
+	 * i.e. it doesn't matter if you call it with a domain that's already in
+	 * ASCII.
+	 * @memberOf punycode
+	 * @param {String} input The domain name or email address to convert, as a
+	 * Unicode string.
+	 * @returns {String} The Punycode representation of the given domain name or
+	 * email address.
+	 */
+	function toASCII(input) {
+		return mapDomain(input, function(string) {
+			return regexNonASCII.test(string)
+				? 'xn--' + encode(string)
+				: string;
+		});
+	}
+
+	/*--------------------------------------------------------------------------*/
+
+	/** Define the public API */
+	punycode = {
+		/**
+		 * A string representing the current Punycode.js version number.
+		 * @memberOf punycode
+		 * @type String
+		 */
+		'version': '1.3.2',
+		/**
+		 * An object of methods to convert from JavaScript's internal character
+		 * representation (UCS-2) to Unicode code points, and back.
+		 * @see <https://mathiasbynens.be/notes/javascript-encoding>
+		 * @memberOf punycode
+		 * @type Object
+		 */
+		'ucs2': {
+			'decode': ucs2decode,
+			'encode': ucs2encode
+		},
+		'decode': decode,
+		'encode': encode,
+		'toASCII': toASCII,
+		'toUnicode': toUnicode
+	};
+
+	/** Expose `punycode` */
+	// Some AMD build optimizers, like r.js, check for specific condition patterns
+	// like the following:
+	if (
+		typeof define == 'function' &&
+		typeof define.amd == 'object' &&
+		define.amd
+	) {
+		define('punycode', function() {
+			return punycode;
+		});
+	} else if (freeExports && freeModule) {
+		if (module.exports == freeExports) {
+			// in Node.js, io.js, or RingoJS v0.8.0+
+			freeModule.exports = punycode;
+		} else {
+			// in Narwhal or RingoJS v0.7.0-
+			for (key in punycode) {
+				punycode.hasOwnProperty(key) && (freeExports[key] = punycode[key]);
+			}
+		}
+	} else {
+		// in Rhino or a web browser
+		root.punycode = punycode;
+	}
+
+}(this));
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{}],8:[function(require,module,exports){
 var RSVP = require('rsvp');
 var URI = require('urijs');
 var core = require('./core');
@@ -4359,7 +5326,7 @@ RSVP.on('rejected', function(event){
   console.error(event.detail.message, event.detail.stack);
 });
 
-},{"./continuous":7,"./core":8,"./epubcfi":9,"./locations":12,"./navigation":14,"./paginate":15,"./parser":16,"./rendition":18,"./request":20,"./spine":22,"./unarchive":23,"rsvp":4,"urijs":5}],7:[function(require,module,exports){
+},{"./continuous":9,"./core":10,"./epubcfi":11,"./locations":14,"./navigation":16,"./paginate":17,"./parser":18,"./rendition":20,"./request":22,"./spine":24,"./unarchive":25,"rsvp":3,"urijs":6}],9:[function(require,module,exports){
 var RSVP = require('rsvp');
 var core = require('./core');
 var Rendition = require('./rendition');
@@ -4779,7 +5746,7 @@ Continuous.prototype.current = function(what){
 
 module.exports = Continuous;
 
-},{"./core":8,"./rendition":18,"./view":24,"rsvp":4}],8:[function(require,module,exports){
+},{"./core":10,"./rendition":20,"./view":26,"rsvp":3}],10:[function(require,module,exports){
 var RSVP = require('rsvp');
 
 var requestAnimationFrame = (typeof window != 'undefined') ? (window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame) : false;
@@ -5220,7 +6187,7 @@ module.exports = {
   'type': type
 };
 
-},{"rsvp":4}],9:[function(require,module,exports){
+},{"rsvp":3}],11:[function(require,module,exports){
 var URI = require('urijs');
 var core = require('./core');
 
@@ -6156,7 +7123,7 @@ EpubCFI.prototype.generateChapterComponent = function(_spineNodeIndex, _pos, id)
 
 module.exports = EpubCFI;
 
-},{"./core":8,"urijs":5}],10:[function(require,module,exports){
+},{"./core":10,"urijs":6}],12:[function(require,module,exports){
 var RSVP = require('rsvp');
 
 //-- Hooks allow for injecting functions that must all complete in order before finishing
@@ -6213,7 +7180,7 @@ Hook.prototype.list = function(){
 
 module.exports = Hook;
 
-},{"rsvp":4}],11:[function(require,module,exports){
+},{"rsvp":3}],13:[function(require,module,exports){
 var core = require('./core');
 
 function Reflowable(){
@@ -6376,7 +7343,7 @@ module.exports = {
   'Scroll': Scroll
 };
 
-},{"./core":8}],12:[function(require,module,exports){
+},{"./core":10}],14:[function(require,module,exports){
 var core = require('./core');
 var Queue = require('./queue');
 var EpubCFI = require('./epubcfi');
@@ -6601,7 +7568,7 @@ RSVP.EventTarget.mixin(Locations.prototype);
 
 module.exports = Locations;
 
-},{"./core":8,"./epubcfi":9,"./queue":17,"rsvp":4}],13:[function(require,module,exports){
+},{"./core":10,"./epubcfi":11,"./queue":19,"rsvp":3}],15:[function(require,module,exports){
 function Map(layout){
   this.layout = layout;
 };
@@ -6890,7 +7857,7 @@ Map.prototype.rangeListToCfiList = function(view, columns){
 
 module.exports = Map;
 
-},{}],14:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 var core = require('./core');
 var Parser = require('./parser');
 var RSVP = require('rsvp');
@@ -6994,7 +7961,7 @@ Navigation.prototype.get = function(target) {
 
 module.exports = Navigation;
 
-},{"./core":8,"./parser":16,"./request":20,"rsvp":4,"urijs":5}],15:[function(require,module,exports){
+},{"./core":10,"./parser":18,"./request":22,"rsvp":3,"urijs":6}],17:[function(require,module,exports){
 var RSVP = require('rsvp');
 var core = require('./core');
 var Continuous = require('./continuous');
@@ -7280,7 +8247,7 @@ Paginate.prototype.adjustImages = function(view) {
 
 module.exports = Paginate;
 
-},{"./continuous":7,"./core":8,"./layout":11,"./map":13,"rsvp":4}],16:[function(require,module,exports){
+},{"./continuous":9,"./core":10,"./layout":13,"./map":15,"rsvp":3}],18:[function(require,module,exports){
 var URI = require('urijs');
 var core = require('./core');
 var RSVP = require('rsvp');
@@ -7774,7 +8741,7 @@ Parser.prototype.pageListItem = function(item, spineIndexByURL, bookSpine){
 
 module.exports = Parser;
 
-},{"./core":8,"./epubcfi":9,"./request":20,"rsvp":4,"urijs":5}],17:[function(require,module,exports){
+},{"./core":10,"./epubcfi":11,"./request":22,"rsvp":3,"urijs":6}],19:[function(require,module,exports){
 var RSVP = require('rsvp');
 var core = require('./core');
 
@@ -7969,7 +8936,7 @@ function Task(task, args, context){
 
 module.exports = Queue;
 
-},{"./core":8,"rsvp":4}],18:[function(require,module,exports){
+},{"./core":10,"rsvp":3}],20:[function(require,module,exports){
 var RSVP = require('rsvp');
 var URI = require('urijs');
 var core = require('./core');
@@ -8742,7 +9709,7 @@ RSVP.EventTarget.mixin(Rendition.prototype);
 
 module.exports = Rendition;
 
-},{"./core":8,"./epubcfi":9,"./hook":10,"./layout":11,"./map":13,"./queue":17,"./replacements":19,"./view":24,"./views":25,"rsvp":4,"urijs":5}],19:[function(require,module,exports){
+},{"./core":10,"./epubcfi":11,"./hook":12,"./layout":13,"./map":15,"./queue":19,"./replacements":21,"./view":26,"./views":27,"rsvp":3,"urijs":6}],21:[function(require,module,exports){
 var URI = require('urijs');
 var core = require('./core');
 
@@ -8829,7 +9796,7 @@ module.exports = {
   'substitute': substitute
 };
 
-},{"./core":8,"urijs":5}],20:[function(require,module,exports){
+},{"./core":10,"urijs":6}],22:[function(require,module,exports){
 var RSVP = require('rsvp');
 var URI = require('urijs');
 var core = require('./core');
@@ -8972,7 +9939,7 @@ function request(url, type, withCredentials, headers) {
 
 module.exports = request;
 
-},{"./core":8,"rsvp":4,"urijs":5}],21:[function(require,module,exports){
+},{"./core":10,"rsvp":3,"urijs":6}],23:[function(require,module,exports){
 var RSVP = require('rsvp');
 var URI = require('urijs');
 var core = require('./core');
@@ -9123,7 +10090,7 @@ Section.prototype.cfiFromElement = function(el) {
 
 module.exports = Section;
 
-},{"./core":8,"./epubcfi":9,"./hook":10,"./replacements":19,"./request":20,"rsvp":4,"urijs":5}],22:[function(require,module,exports){
+},{"./core":10,"./epubcfi":11,"./hook":12,"./replacements":21,"./request":22,"rsvp":3,"urijs":6}],24:[function(require,module,exports){
 var RSVP = require('rsvp');
 var core = require('./core');
 var EpubCFI = require('./epubcfi');
@@ -9247,7 +10214,7 @@ Spine.prototype.each = function() {
 
 module.exports = Spine;
 
-},{"./core":8,"./epubcfi":9,"./section":21,"rsvp":4}],23:[function(require,module,exports){
+},{"./core":10,"./epubcfi":11,"./section":23,"rsvp":3}],25:[function(require,module,exports){
 var RSVP = require('rsvp');
 var URI = require('urijs');
 var core = require('./core');
@@ -9397,7 +10364,7 @@ Unarchive.prototype.revokeUrl = function(url){
 
 module.exports = Unarchive;
 
-},{"../libs/mime/mime":1,"./core":8,"./request":20,"jszip":"jszip","rsvp":4,"urijs":5}],24:[function(require,module,exports){
+},{"../libs/mime/mime":1,"./core":10,"./request":22,"jszip":"jszip","rsvp":3,"urijs":6}],26:[function(require,module,exports){
 var RSVP = require('rsvp');
 var core = require('./core');
 var EpubCFI = require('./epubcfi');
@@ -10162,7 +11129,7 @@ RSVP.EventTarget.mixin(View.prototype);
 
 module.exports = View;
 
-},{"./core":8,"./epubcfi":9,"rsvp":4}],25:[function(require,module,exports){
+},{"./core":10,"./epubcfi":11,"rsvp":3}],27:[function(require,module,exports){
 function Views(container) {
   this.container = container;
   this._views = [];
@@ -10332,7 +11299,7 @@ ePub.CFI = EpubCFI;
 
 module.exports = ePub;
 
-},{"./book":6,"./epubcfi":9}]},{},["epub"])("epub")
+},{"./book":8,"./epubcfi":11}]},{},["epub"])("epub")
 });
 
 
