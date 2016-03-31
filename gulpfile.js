@@ -96,10 +96,10 @@ function bundle(file, watch) {
 
   // Ignore optional URI libraries
   var urijsPath = URI(require.resolve('urijs'));
-  ['./punycode.js', './IPv6.js', './SecondLevelDomains.js'].forEach(function(lib) {
-    var libPath = URI(lib).absoluteTo(urijsPath).toString();
-    b.ignore(libPath);
-  });
+  // ['./punycode.js', './IPv6.js', './SecondLevelDomains.js'].forEach(function(lib) {
+  //   var libPath = URI(lib).absoluteTo(urijsPath).toString();
+  //   b.ignore(libPath);
+  // });
 
   // watchify() if watch requested, otherwise run browserify() once
   var bundler = watch ? watchify(b) : b;
