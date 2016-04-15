@@ -347,53 +347,33 @@ Parser.prototype.navItem = function(item, spineIndexByURL, bookSpine){
 	};
 };
 
-Parser.prototype.toc = function(tocXml, spineIndexByURL, bookSpine, baseUrl){
+Parser.prototype.toc = function(tocXml, spineIndexByURL, bookSpine){
 	var navPoints = tocXml.querySelectorAll("navMap navPoint");
 	var length = navPoints.length;
-	var loading = new RSVP.defer();
-	var loaded = loading.promise;
-	var i, j = 0;
+	var i;
 	var toc = {};
 	var list = [];
 	var item, parent;
 
-	if(!navPoints || length === 0) loading.resolve(list);
+	if(!navPoints || length === 0) return list;
 
 
 	for (i = 0; i < length; ++i) {
-		this.tocItem(navPoints[i], spineIndexByURL, bookSpine, baseUrl).then(function(item) {
-			list.push(item);
-			
-			if (++j === length) {
-				return loading.resolve(list);
-			}
-		});
+		item = this.tocItem(navPoints[i], spineIndexByURL, bookSpine);
+    toc[item.id] = item;
+
+    if(!item.parent) {
+      list.push(item);
+    } else {
+      parent = toc[item.parent];
+      parent.subitems.push(item);
+    }
 	}
 
-	return loaded;
+	return list;
 };
 
-Parser.prototype.getSubitems = function(chapter) {
-  var rawSubChapters = chapter.getElementsByTagName('h2');
-  var subChapters = [];
-
-  if (subChapters && subChapters.length) {
-    return [];
-  }
-
-
-  for (var i = 0; i < rawSubChapters.length; i++) {
-    subChapters.push({
-    	name: rawSubChapters[i].innerHTML.replace(/\s+/g,' '),
-    	id: rawSubChapters[i].getAttribute('id'),
-    	raw: rawSubChapters[i]
-    });
-  }
-
-  return subChapters;
-};
-
-Parser.prototype.tocItem = function(item, spineIndexByURL, bookSpine, baseUrl){
+Parser.prototype.tocItem = function(item, spineIndexByURL, bookSpine){
 	var id = item.getAttribute('id') || false,
 			content = item.querySelector("content"),
 			src = content.getAttribute('src'),
@@ -405,58 +385,20 @@ Parser.prototype.tocItem = function(item, spineIndexByURL, bookSpine, baseUrl){
 			// spineItem = bookSpine[spinePos],
 			subitems = [],
 			parentNode = item.parentNode,
-			request = require('./request'),
-			loading = new RSVP.defer(),
-			loaded = loading.promise,
-			parent,
-            navUrl,
-            navUri;
+      parent;
 			// cfi = spineItem ? spineItem.cfi : '';
 
-  if (src) {
-	  navUri = URI(src);
-
-	  if (baseUrl) {
-	  	navUri = navUri.absoluteTo(baseUrl);
-	  }
-
-	  navUrl = navUri.toString();
-
-	  request(navUrl, 'html').then(function(chapter) {
-	    subitems = this.getSubitems(chapter);
-
-	    return loading.resolve({
-	      "id": id,
-	      "href": src,
-	      "label": text,
-	      "subitems" : subitems,
-	      "parent" : parent
-	    });
-	  }.bind(this));
-
-	  /*
-		if(!id) {
-			if(spinePos) {
-				spineItem = bookSpine[spinePos];
-				id = spineItem.id;
-				cfi = spineItem.cfi;
-			} else {
-				id = 'epubjs-autogen-toc-id-' + EPUBJS.core.uuid();
-				item.setAttribute('id', id);
-			}
-		}
-	  */    
-  } else {
-  	return loading.resolve({
-      "id": id,
-      "href": src,
-      "label": text,
-      "subitems" : [], // assume there are no subitems
-      "parent" : parent
-    });
+  if(parentNode && parentNode.nodeName === "navPoint") {
+    parent = parentNode.getAttribute('id');
   }
 
-  return loaded;
+  return {
+    "id": id,
+    "href": src,
+    "label": text,
+    "subitems" : subitems,
+    "parent" : parent
+  }
 };
 
 Parser.prototype.pageList = function(navHtml, spineIndexByURL, bookSpine){
