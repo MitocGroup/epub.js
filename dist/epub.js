@@ -8662,7 +8662,13 @@ Parser.prototype.tocItem = function(item, spineIndexByURL, bookSpine, baseUrl){
       navUrl;
 			// cfi = spineItem ? spineItem.cfi : '';
 
-  navUrl = URI(content.getAttribute('src')).absoluteTo(baseUrl).toString();
+  if (!src) {
+	loaded.reject('Missing tocItem source');    
+
+  	return loaded;
+  }
+
+  navUrl = URI(src).absoluteTo(baseUrl).toString();
   request(navUrl, 'html').then(function(chapter) {
     subitems = this.getSubitems(chapter);
 
