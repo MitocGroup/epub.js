@@ -8664,7 +8664,7 @@ Parser.prototype.tocItem = function(item, spineIndexByURL, bookSpine, baseUrl){
 			// cfi = spineItem ? spineItem.cfi : '';
 
   if (!src) {
-    loaded.reject('Missing tocItem source');    
+    loading.reject('Missing tocItem source');
 
   	return loaded;
   }
