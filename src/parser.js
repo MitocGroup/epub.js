@@ -413,44 +413,48 @@ Parser.prototype.tocItem = function(item, spineIndexByURL, bookSpine, baseUrl){
             navUri;
 			// cfi = spineItem ? spineItem.cfi : '';
 
-  if (!src) {
-    loading.reject('Missing tocItem source');
+  if (src) {
+	  navUri = URI(src);
 
-  	return loaded;
-  }
+	  if (baseUrl) {
+	  	navUri = navUri.absoluteTo(baseUrl);
+	  }
 
-  navUri = URI(src);
+	  navUrl = navUri.toString();
 
-  if (baseUrl) {
-  	navUri = navUri.absoluteTo(baseUrl);
-  }
+	  request(navUrl, 'html').then(function(chapter) {
+	    subitems = this.getSubitems(chapter);
 
-  navUrl = navUri.toString();
+	    return loading.resolve({
+	      "id": id,
+	      "href": src,
+	      "label": text,
+	      "subitems" : subitems,
+	      "parent" : parent
+	    });
+	  }.bind(this));
 
-  request(navUrl, 'html').then(function(chapter) {
-    subitems = this.getSubitems(chapter);
-
-    return loading.resolve({
+	  /*
+		if(!id) {
+			if(spinePos) {
+				spineItem = bookSpine[spinePos];
+				id = spineItem.id;
+				cfi = spineItem.cfi;
+			} else {
+				id = 'epubjs-autogen-toc-id-' + EPUBJS.core.uuid();
+				item.setAttribute('id', id);
+			}
+		}
+	  */    
+  } else {
+  	return loading.resolve({
       "id": id,
       "href": src,
       "label": text,
-      "subitems" : subitems,
+      "subitems" : [], // assume there are no subitems
       "parent" : parent
     });
-  }.bind(this));
-
-  /*
-	if(!id) {
-		if(spinePos) {
-			spineItem = bookSpine[spinePos];
-			id = spineItem.id;
-			cfi = spineItem.cfi;
-		} else {
-			id = 'epubjs-autogen-toc-id-' + EPUBJS.core.uuid();
-			item.setAttribute('id', id);
-		}
-	}
-  */
+  }
 
   return loaded;
 };
