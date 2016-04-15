@@ -409,16 +409,24 @@ Parser.prototype.tocItem = function(item, spineIndexByURL, bookSpine, baseUrl){
 			loading = new RSVP.defer(),
 			loaded = loading.promise,
 			parent,
-      navUrl;
+            navUrl,
+            navUri;
 			// cfi = spineItem ? spineItem.cfi : '';
 
   if (!src) {
-	loaded.reject('Missing tocItem source');    
+    loaded.reject('Missing tocItem source');    
 
   	return loaded;
   }
 
-  navUrl = URI(src).absoluteTo(baseUrl).toString();
+  navUri = URI(src);
+
+  if (baseUrl) {
+  	navUri = navUri.absoluteTo(baseUrl);
+  }
+
+  navUrl = navUri.toString();
+
   request(navUrl, 'html').then(function(chapter) {
     subitems = this.getSubitems(chapter);
 
