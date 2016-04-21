@@ -9682,14 +9682,13 @@ function links(view, renderer) {
 			}
       */
 
-      if(linkUri.fragment()) {
-        // do nothing with fragment yet
-      } else {
-        link.onclick = function(){
-          renderer.display(relative);
-          return false;
-        };
-      }
+      link.onclick = function(){
+        renderer.display(relative).then(function() {
+          this.trigger('scrollTo');
+        }.bind(this));
+        
+        return false;
+      }.bind(this);
 
     }
   }.bind(this);
