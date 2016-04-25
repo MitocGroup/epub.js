@@ -9284,7 +9284,10 @@ Rendition.prototype.resize = function(width, height){
 };
 
 Rendition.prototype.onResized = function(e) {
+	var top = window.scrollY;
 	this.resize();
+
+  	window.scrollTo(0, top);
 };
 
 Rendition.prototype.createView = function(section) {
