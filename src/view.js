@@ -578,9 +578,9 @@ View.prototype.locationOf = function(target) {
   if(!this.document) return;
 
   if(this.epubcfi.isCfiString(target)) {
-    range = new EpubCFI(cfi).toRange(this.document, this.settings.ignoreClass);
+    range = new EpubCFI(target).toRange(this.document, this.settings.ignoreClass);
     if(range) {
-      targetPos = range.getBoundingClientRect();
+      targetPos = range.commonAncestorContainer.getBoundingClientRect();
     }
 
   } else if(typeof target === "string" &&
@@ -757,6 +757,26 @@ View.prototype.range = function(_cfi, ignoreClass){
   var cfi = new EpubCFI(_cfi);
   return cfi.toRange(this.document, ignoreClass || this.settings.ignoreClass);
 };
+
+View.prototype._generateCfi = function(el, cfi) {
+  if (el.parentElement.parentElement) {
+    cfi = this._generateCfi(el.parentElement, cfi);
+  }
+
+  return cfi + Array.prototype.slice.call(el.parentElement.children).indexOf(el) + '/';
+}
+
+View.prototype.currentPosition = function() {
+  var offset = this.iframe.getBoundingClientRect().top + window.scrollY;
+  var currentElement = this.document.elementFromPoint(0, window.scrollY - offset);
+  var cfi = this._generateCfi(currentElement, this.section.cfiBase + '!/');
+
+  if (cfi[cfi.length - 1] === '/') {
+    cfi = cfi.substring(0, cfi.length - 1);
+  }
+
+  return 'epubcfi(' + cfi + ')';
+}
 
 RSVP.EventTarget.mixin(View.prototype);
 
