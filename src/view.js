@@ -768,7 +768,7 @@ View.prototype._generateCfi = function(el, cfi) {
 
 View.prototype.currentPosition = function() {
   var offset = this.iframe.getBoundingClientRect().top + window.scrollY;
-  var currentElement = this.document.elementFromPoint(0, window.scrollY - offset) || this.document.getElementsByTagName('body');
+  var currentElement = this.document.elementFromPoint(0, window.scrollY - offset) || this.document.getElementsByTagName('body')[0];
   var cfi = this._generateCfi(currentElement, this.section.cfiBase + '!/');
 
   if (cfi[cfi.length - 1] === '/') {
