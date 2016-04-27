@@ -763,7 +763,7 @@ View.prototype._generateCfi = function(el, cfi) {
     cfi = this._generateCfi(el.parentElement, cfi);
   }
 
-  return cfi + Array.prototype.slice.call(el.parentElement.children).indexOf(el) + '/';
+  return cfi + ((Array.prototype.slice.call(el.parentElement.children).indexOf(el) + 1) * 2) + '/';
 }
 
 View.prototype.currentPosition = function() {
