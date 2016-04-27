@@ -759,7 +759,7 @@ View.prototype.range = function(_cfi, ignoreClass){
 };
 
 View.prototype._generateCfi = function(el, cfi) {
-  if (el.parentElement.parentElement) {
+  if (el.parentElement && el.parentElement.parentElement) {
     cfi = this._generateCfi(el.parentElement, cfi);
   }
 
