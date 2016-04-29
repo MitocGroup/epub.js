@@ -771,6 +771,36 @@ View.prototype.currentElement = function() {
   return currentElement;
 }
 
+View.prototype.getPrevFromIds = function(ids) {
+  if (typeof ids === 'string') {
+    ids = [ids];
+  }
+
+  var currentElement = this.currentElement();
+  var lastElement = null;
+
+  var el = currentElement.parentElement;
+
+  while(el && el.tagName !== 'HTML' && !lastElement) {
+    var els = Array.prototype.slice.call(el.children);
+    var position = els.indexOf(currentElement);
+
+    for (var index = position; index >= 0; index--) {
+      var selectedElement = els[index];
+
+      if (ids.indexOf(selectedElement.id) > -1 && !lastElement) {
+        lastElement = selectedElement;
+      }
+
+    }
+
+    currentElement = el;
+    el = el.parentElement;
+  }
+
+  return lastElement ? {id: lastElement.id, index: ids.indexOf(lastElement.id)} : lastElement;
+}
+
 View.prototype._generateCfi = function(el, cfi) {
   if (el.parentElement && el.parentElement.parentElement) {
     cfi = this._generateCfi(el.parentElement, cfi);
