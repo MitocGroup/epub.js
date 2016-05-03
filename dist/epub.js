@@ -10688,7 +10688,7 @@ View.prototype.resized = function(e) {
   }*/
 
 };
-
+4
 View.prototype.render = function(_request) {
 
   // if(this.rendering){
@@ -11146,6 +11146,10 @@ View.prototype.triggerSelectedEvent = function(selection){
 };
 
 View.prototype.currentElement = function() {
+  if (!this.document) {
+    return;
+  }
+  
   var offset = this.iframe.getBoundingClientRect().top + window.scrollY;
   var currentElement = this.document.elementFromPoint(0, window.scrollY - offset);
   var remove = 5;
@@ -11194,12 +11198,12 @@ View.prototype.getPrevFromIds = function(ids) {
 }
 
 View.prototype._generateCfi = function(el, cfi) {
-  if (el.parentElement && el.parentElement.parentElement) {
-    cfi = this._generateCfi(el.parentElement, cfi);
+  if (!el || !el.parentElement) {
+    var el = this.document.getElementsByTagName('body')[0];
   }
 
-  if (!el.parentElement) {
-    var el = this.document.getElementsByTagName('body')[0];
+  if (el.parentElement && el.parentElement.parentElement) {
+    cfi = this._generateCfi(el.parentElement, cfi);
   }
 
   return cfi + ((Array.prototype.slice.call(el.parentElement.children).indexOf(el) + 1) * 2) + '/';
