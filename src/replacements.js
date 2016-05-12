@@ -52,6 +52,7 @@ function links(view, renderer) {
       */
 
       link.onclick = function(){
+        this.trigger('startScrollTo');
         renderer.display(relative).then(function() {
           this.trigger('scrollTo');
         }.bind(this));
