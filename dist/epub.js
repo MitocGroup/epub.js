@@ -7717,6 +7717,15 @@ Map.prototype.section = function(view) {
 };
 
 Map.prototype.page = function(view, start, end) {
+  
+  //@todo: Find another way to handle close views
+  if (!view.document) {
+    return {
+      start: 0,
+      end: 0
+    }
+  }
+  
   var root = view.document.body;
   return this.rangePairToCfiPair(view.section, {
     start: this.findStart(root, start, end),
@@ -10762,7 +10771,7 @@ View.prototype.resized = function(e) {
   }*/
 
 };
-4
+
 View.prototype.render = function(_request) {
 
   // if(this.rendering){

@@ -296,7 +296,7 @@ View.prototype.resized = function(e) {
   }*/
 
 };
-4
+
 View.prototype.render = function(_request) {
 
   // if(this.rendering){
