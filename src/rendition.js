@@ -200,6 +200,10 @@ Rendition.prototype._display = function(target){
 
 	var visible;
 
+	if (target.indexOf('OEBPS/') === 0) {
+		target = target.replace('OEBPS/', '');
+	}
+	
 	section = this.book.spine.get(target);
 
 	if(!section){
