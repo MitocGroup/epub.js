@@ -9237,15 +9237,19 @@ Rendition.prototype._display = function(target){
 	var displayed = displaying.promise;
 
 	var section;
-  var view;
-  var offset;
+	var view;
+	var offset;
 	var fragment;
 	var cfi = this.epubcfi.isCfiString(target);
-
+	var lastPart = this.book.baseUrl.split("/").pop();
 	var visible;
 
-	if (target.indexOf('OEBPS/') === 0) {
-		target = target.replace('OEBPS/', '');
+	if (!lastPart) {
+	lastPart = this.book.baseUrl.substring(0, this.book.baseUrl.length - 1).split("/").pop();
+	}
+
+	if (target.indexOf(lastPart) === 0) {
+	target = target.replace(lastPart + '/', '');
 	}
 	
 	section = this.book.spine.get(target);
