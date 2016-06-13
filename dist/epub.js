@@ -11242,7 +11242,8 @@ View.prototype.currentElement = function() {
   }
   
   var offset = this.iframe.getBoundingClientRect().top + window.scrollY;
-  var currentElement = this.document.elementFromPoint(0, window.scrollY - offset);
+  var left = this.document.getElementsByTagName('body')[0].getBoundingClientRect().width / 2;
+  var currentElement = this.document.elementFromPoint(left, window.scrollY - offset);
   var remove = 5;
   var retry = 30;
 
@@ -11251,7 +11252,7 @@ View.prototype.currentElement = function() {
   }
 
   while (currentElement.tagName === 'BODY' && window.scrollY - offset - remove > offset && retry !== 0) {
-    currentElement = this.document.elementFromPoint(0, window.scrollY - offset - remove);
+    currentElement = this.document.elementFromPoint(left, window.scrollY - offset - remove);
     retry--; remove += 5;
   }
 
