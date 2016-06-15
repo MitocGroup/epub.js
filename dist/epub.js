@@ -5345,18 +5345,10 @@ module.exports = Book;
 //-- Enable binding events to book
 RSVP.EventTarget.mixin(Book.prototype);
 
-//-- Handle RSVP Errors
-RSVP.on('error', function(event) {
-  console.error(event);
-});
-
 RSVP.configure('instrument', true); //-- true | will logging out all RSVP rejections
 // RSVP.on('created', listener);
 // RSVP.on('chained', listener);
 // RSVP.on('fulfilled', listener);
-RSVP.on('rejected', function(event){
-  console.error(event.detail.message, event.detail.stack);
-});
 
 },{"./continuous":9,"./core":10,"./epubcfi":11,"./locations":15,"./navigation":17,"./paginate":18,"./parser":19,"./rendition":21,"./request":23,"./spine":25,"./unarchive":26,"rsvp":3,"urijs":6}],9:[function(require,module,exports){
 var RSVP = require('rsvp');
@@ -7211,15 +7203,15 @@ Highlighter.prototype.getTextNodes = function(range, _doc) {
   while(node = nodeIterator.nextNode()) {
     if (node == range.startContainer) {
       mark = true;
-      continue
+      continue;
     } else if (node === range.endContainer) {
-      break
+      break;
     }
 
     if (mark) nodes.push(node);
   }
 
-  return nodes
+  return nodes;
 
 };
 
@@ -11482,6 +11474,7 @@ module.exports = Views;
 var Book = require('./book');
 var EpubCFI = require('./epubcfi');
 var Highlighter = require('./highlighter');
+var RSVP = require('rsvp')
 
 function ePub(_url) {
 	return new Book(_url);
@@ -11490,10 +11483,11 @@ function ePub(_url) {
 ePub.VERSION = "0.3.0";
 ePub.CFI = EpubCFI;
 ePub.Highlighter = Highlighter;
+ePub.RSVP = RSVP;
 
 module.exports = ePub;
 
-},{"./book":8,"./epubcfi":11,"./highlighter":12}]},{},["epub"])("epub")
+},{"./book":8,"./epubcfi":11,"./highlighter":12,"rsvp":3}]},{},["epub"])("epub")
 });
 
 

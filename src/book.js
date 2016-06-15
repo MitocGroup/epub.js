@@ -294,15 +294,7 @@ module.exports = Book;
 //-- Enable binding events to book
 RSVP.EventTarget.mixin(Book.prototype);
 
-//-- Handle RSVP Errors
-RSVP.on('error', function(event) {
-  console.error(event);
-});
-
 RSVP.configure('instrument', true); //-- true | will logging out all RSVP rejections
 // RSVP.on('created', listener);
 // RSVP.on('chained', listener);
 // RSVP.on('fulfilled', listener);
-RSVP.on('rejected', function(event){
-  console.error(event.detail.message, event.detail.stack);
-});

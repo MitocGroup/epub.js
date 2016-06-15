@@ -53,15 +53,15 @@ Highlighter.prototype.getTextNodes = function(range, _doc) {
   while(node = nodeIterator.nextNode()) {
     if (node == range.startContainer) {
       mark = true;
-      continue
+      continue;
     } else if (node === range.endContainer) {
-      break
+      break;
     }
 
     if (mark) nodes.push(node);
   }
 
-  return nodes
+  return nodes;
 
 };
 
