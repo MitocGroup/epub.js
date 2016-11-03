@@ -52,11 +52,11 @@ function links(view, renderer) {
       */
 
       link.onclick = function(){
-        this.trigger('startScrollTo');
+        this.trigger('startScrollTo', relative);
         renderer.display(relative).then(function() {
           this.trigger('scrollTo');
         }.bind(this));
-        
+
         return false;
       }.bind(this);
 
